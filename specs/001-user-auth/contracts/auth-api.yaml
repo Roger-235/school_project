@@ -1,0 +1,535 @@
+openapi: 3.0.3
+info:
+  title: ACAP Authentication API
+  description: |
+    User authentication system for ACAP MVP. Provides admin self-registration,
+    user login, school staff account creation, and session management.
+  version: 1.0.0
+  contact:
+    name: ACAP Development Team
+
+servers:
+  - url: https://api.acap.example.com/api/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints (login, register, logout)
+  - name: Admin
+    description: Admin-only operations (create school staff)
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Admin self-registration
+      description: |
+        Allows administrators to self-register if their email is on the whitelist.
+        Only whitelisted emails can create admin accounts. Returns JWT token on success.
+      operationId: registerAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              valid:
+                summary: Valid registration
+                value:
+                  email: admin@example.com
+                  password: SecurePass123
+      responses:
+        '201':
+          description: Admin account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  summary: Successful registration
+                  value:
+                    data:
+                      user:
+                        id: 1
+                        email: admin@example.com
+                        role: admin
+                        created_at: '2025-11-14T10:00:00Z'
+                        updated_at: '2025-11-14T10:00:00Z'
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error (weak password, invalid email, duplicate email)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                weakPassword:
+                  summary: Weak password
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Password must be at least 8 characters and contain at least one letter and one number
+                      status: 400
+                duplicateEmail:
+                  summary: Email already exists
+                  value:
+                    error:
+                      code: DUPLICATE_EMAIL
+                      message: Email address is already registered
+                      status: 400
+        '403':
+          description: Email not on whitelist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notWhitelisted:
+                  summary: Email not whitelisted
+                  value:
+                    error:
+                      code: NOT_WHITELISTED
+                      message: This email address is not authorized for admin registration
+                      status: 403
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticates users (admin or school staff) with email and password.
+        Returns JWT token valid for 24 hours on success.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              valid:
+                summary: Valid login
+                value:
+                  email: user@example.com
+                  password: SecurePass123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                adminLogin:
+                  summary: Admin login
+                  value:
+                    data:
+                      user:
+                        id: 1
+                        email: admin@example.com
+                        role: admin
+                        created_at: '2025-11-14T10:00:00Z'
+                        updated_at: '2025-11-14T10:00:00Z'
+                        last_login_at: '2025-11-14T12:00:00Z'
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                staffLogin:
+                  summary: School staff login
+                  value:
+                    data:
+                      user:
+                        id: 2
+                        email: staff@school.com
+                        role: school_staff
+                        created_at: '2025-11-14T11:00:00Z'
+                        updated_at: '2025-11-14T11:00:00Z'
+                        last_login_at: '2025-11-14T12:05:00Z'
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error (empty fields, invalid format)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                emptyFields:
+                  summary: Empty email or password
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Email and password are required
+                      status: 400
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  summary: Generic auth failure
+                  value:
+                    error:
+                      code: INVALID_CREDENTIALS
+                      message: Invalid email or password
+                      status: 401
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: |
+        Logs out the current user. Client must clear the JWT token.
+        Server logs the logout event but does not maintain token blacklist (stateless).
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Logout successful
+              examples:
+                success:
+                  summary: Successful logout
+                  value:
+                    data:
+                      message: Logout successful
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: |
+        Returns the currently authenticated user's information.
+        Validates JWT token and returns user profile.
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+              examples:
+                admin:
+                  summary: Admin user
+                  value:
+                    data:
+                      id: 1
+                      email: admin@example.com
+                      role: admin
+                      created_at: '2025-11-14T10:00:00Z'
+                      updated_at: '2025-11-14T10:00:00Z'
+                      last_login_at: '2025-11-14T12:00:00Z'
+        '401':
+          description: Unauthorized (invalid or expired token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expiredToken:
+                  summary: Expired token
+                  value:
+                    error:
+                      code: TOKEN_EXPIRED
+                      message: Authentication token has expired, please login again
+                      status: 401
+                invalidToken:
+                  summary: Invalid token
+                  value:
+                    error:
+                      code: INVALID_TOKEN
+                      message: Invalid authentication token
+                      status: 401
+
+  /admin/users:
+    post:
+      tags:
+        - Admin
+      summary: Create school staff user
+      description: |
+        Admin-only endpoint to create school staff user accounts.
+        Requires valid admin JWT token. Created users have 'school_staff' role.
+      operationId: createSchoolStaff
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            examples:
+              valid:
+                summary: Create school staff
+                value:
+                  email: staff@school.com
+                  password: StaffPass456
+      responses:
+        '201':
+          description: School staff account created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  summary: Successfully created
+                  value:
+                    data:
+                      id: 2
+                      email: staff@school.com
+                      role: school_staff
+                      created_at: '2025-11-14T11:00:00Z'
+                      updated_at: '2025-11-14T11:00:00Z'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                weakPassword:
+                  summary: Weak password
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Password must be at least 8 characters and contain at least one letter and one number
+                      status: 400
+                duplicateEmail:
+                  summary: Email already exists
+                  value:
+                    error:
+                      code: DUPLICATE_EMAIL
+                      message: Email address is already registered
+                      status: 400
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (non-admin user)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notAdmin:
+                  summary: Non-admin access denied
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Only administrators can create user accounts
+                      status: 403
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login or /auth/register
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Admin email address (must be on whitelist)
+          example: admin@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Password (min 8 chars, at least 1 letter and 1 number)
+          example: SecurePass123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: User email address
+          example: user@example.com
+        password:
+          type: string
+          maxLength: 72
+          description: User password
+          example: SecurePass123
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: School staff email address
+          example: staff@school.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Initial password for school staff (min 8 chars, at least 1 letter and 1 number)
+          example: StaffPass456
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique user identifier
+          example: 1
+        email:
+          type: string
+          format: email
+          description: User email address (lowercase)
+          example: user@example.com
+        role:
+          type: string
+          enum: [admin, school_staff]
+          description: User role
+          example: admin
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp (ISO 8601)
+          example: '2025-11-14T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (ISO 8601)
+          example: '2025-11-14T10:00:00Z'
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last successful login timestamp (ISO 8601), null if never logged in
+          example: '2025-11-14T12:00:00Z'
+      required:
+        - id
+        - email
+        - role
+        - created_at
+        - updated_at
+
+    AuthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            token:
+              type: string
+              description: JWT token (valid for 24 hours)
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTY5OTk4NzIwMCwiaWF0IjoxNjk5OTAwODAwfQ.signature
+          required:
+            - user
+            - token
+      required:
+        - data
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              enum:
+                - VALIDATION_ERROR
+                - DUPLICATE_EMAIL
+                - NOT_WHITELISTED
+                - INVALID_CREDENTIALS
+                - TOKEN_EXPIRED
+                - INVALID_TOKEN
+                - FORBIDDEN
+                - INTERNAL_ERROR
+              example: INVALID_CREDENTIALS
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid email or password
+            status:
+              type: integer
+              description: HTTP status code
+              example: 401
+          required:
+            - code
+            - message
+            - status
+      required:
+        - error
+
+security: []  # Most endpoints are public (login, register); specific endpoints override with BearerAuth

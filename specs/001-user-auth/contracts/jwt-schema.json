@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://acap.example.com/schemas/jwt-payload.json",
+  "title": "ACAP JWT Payload Schema",
+  "description": "JSON Web Token payload structure for ACAP authentication system",
+  "type": "object",
+  "required": ["sub", "email", "role", "exp", "iat"],
+  "properties": {
+    "sub": {
+      "type": "string",
+      "description": "Subject (User ID as string)",
+      "pattern": "^[0-9]+$",
+      "examples": ["1", "123", "456"]
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "User email address (normalized to lowercase)",
+      "maxLength": 255,
+      "examples": ["admin@example.com", "staff@school.com"]
+    },
+    "role": {
+      "type": "string",
+      "enum": ["admin", "school_staff"],
+      "description": "User role (admin or school_staff)"
+    },
+    "exp": {
+      "type": "integer",
+      "description": "Expiration time (Unix timestamp in seconds, 24 hours from issuance)",
+      "minimum": 0,
+      "examples": [1699987200]
+    },
+    "iat": {
+      "type": "integer",
+      "description": "Issued at time (Unix timestamp in seconds)",
+      "minimum": 0,
+      "examples": [1699900800]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "sub": "1",
+      "email": "admin@example.com",
+      "role": "admin",
+      "exp": 1699987200,
+      "iat": 1699900800
+    },
+    {
+      "sub": "2",
+      "email": "staff@school.com",
+      "role": "school_staff",
+      "exp": 1700073600,
+      "iat": 1699987200
+    }
+  ]
+}
