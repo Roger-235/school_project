@@ -1,0 +1,313 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "臺北市",
+        "COUNTYCODE": "63000",
+        "COUNTYENG": "Taipei City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.5, 25.0], [121.6, 25.0], [121.6, 25.1], [121.5, 25.1], [121.5, 25.0]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "新北市",
+        "COUNTYCODE": "65000",
+        "COUNTYENG": "New Taipei City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.4, 24.9], [121.7, 24.9], [121.7, 25.2], [121.4, 25.2], [121.4, 24.9]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "桃園市",
+        "COUNTYCODE": "68000",
+        "COUNTYENG": "Taoyuan City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.1, 24.8], [121.4, 24.8], [121.4, 25.1], [121.1, 25.1], [121.1, 24.8]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "臺中市",
+        "COUNTYCODE": "66000",
+        "COUNTYENG": "Taichung City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.5, 24.0], [120.8, 24.0], [120.8, 24.3], [120.5, 24.3], [120.5, 24.0]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "臺南市",
+        "COUNTYCODE": "67000",
+        "COUNTYENG": "Tainan City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.1, 22.9], [120.4, 22.9], [120.4, 23.2], [120.1, 23.2], [120.1, 22.9]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "高雄市",
+        "COUNTYCODE": "64000",
+        "COUNTYENG": "Kaohsiung City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.2, 22.5], [120.5, 22.5], [120.5, 22.8], [120.2, 22.8], [120.2, 22.5]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "基隆市",
+        "COUNTYCODE": "10017",
+        "COUNTYENG": "Keelung City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.7, 25.1], [121.8, 25.1], [121.8, 25.2], [121.7, 25.2], [121.7, 25.1]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "新竹市",
+        "COUNTYCODE": "10018",
+        "COUNTYENG": "Hsinchu City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.9, 24.7], [121.0, 24.7], [121.0, 24.8], [120.9, 24.8], [120.9, 24.7]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "嘉義市",
+        "COUNTYCODE": "10020",
+        "COUNTYENG": "Chiayi City"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.4, 23.4], [120.5, 23.4], [120.5, 23.5], [120.4, 23.5], [120.4, 23.4]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "新竹縣",
+        "COUNTYCODE": "10004",
+        "COUNTYENG": "Hsinchu County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.8, 24.6], [121.1, 24.6], [121.1, 24.9], [120.8, 24.9], [120.8, 24.6]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "苗栗縣",
+        "COUNTYCODE": "10005",
+        "COUNTYENG": "Miaoli County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.6, 24.3], [120.9, 24.3], [120.9, 24.6], [120.6, 24.6], [120.6, 24.3]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "彰化縣",
+        "COUNTYCODE": "10007",
+        "COUNTYENG": "Changhua County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.3, 23.8], [120.6, 23.8], [120.6, 24.1], [120.3, 24.1], [120.3, 23.8]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "南投縣",
+        "COUNTYCODE": "10008",
+        "COUNTYENG": "Nantou County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.6, 23.6], [121.0, 23.6], [121.0, 24.0], [120.6, 24.0], [120.6, 23.6]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "雲林縣",
+        "COUNTYCODE": "10009",
+        "COUNTYENG": "Yunlin County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.1, 23.5], [120.4, 23.5], [120.4, 23.8], [120.1, 23.8], [120.1, 23.5]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "嘉義縣",
+        "COUNTYCODE": "10010",
+        "COUNTYENG": "Chiayi County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.2, 23.2], [120.5, 23.2], [120.5, 23.5], [120.2, 23.5], [120.2, 23.2]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "屏東縣",
+        "COUNTYCODE": "10013",
+        "COUNTYENG": "Pingtung County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.3, 22.0], [120.7, 22.0], [120.7, 22.5], [120.3, 22.5], [120.3, 22.0]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "宜蘭縣",
+        "COUNTYCODE": "10002",
+        "COUNTYENG": "Yilan County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.7, 24.4], [122.0, 24.4], [122.0, 24.8], [121.7, 24.8], [121.7, 24.4]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "花蓮縣",
+        "COUNTYCODE": "10015",
+        "COUNTYENG": "Hualien County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[121.3, 23.5], [121.7, 23.5], [121.7, 24.3], [121.3, 24.3], [121.3, 23.5]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "臺東縣",
+        "COUNTYCODE": "10014",
+        "COUNTYENG": "Taitung County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[120.9, 22.5], [121.3, 22.5], [121.3, 23.3], [120.9, 23.3], [120.9, 22.5]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "澎湖縣",
+        "COUNTYCODE": "10016",
+        "COUNTYENG": "Penghu County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[119.5, 23.4], [119.7, 23.4], [119.7, 23.7], [119.5, 23.7], [119.5, 23.4]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "金門縣",
+        "COUNTYCODE": "09020",
+        "COUNTYENG": "Kinmen County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[118.3, 24.4], [118.5, 24.4], [118.5, 24.5], [118.3, 24.5], [118.3, 24.4]]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "COUNTYNAME": "連江縣",
+        "COUNTYCODE": "09007",
+        "COUNTYENG": "Lienchiang County"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [[119.9, 26.1], [120.1, 26.1], [120.1, 26.3], [119.9, 26.3], [119.9, 26.1]]
+        ]
+      }
+    }
+  ]
+}

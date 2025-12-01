@@ -1,0 +1,282 @@
+openapi: 3.0.3
+info:
+  title: ACAP Map Visualization API
+  description: |
+    County statistics API for Taiwan map visualization feature. Provides aggregated
+    data (school count, student count) for all counties or individual counties.
+  version: 1.0.0
+  contact:
+    name: ACAP Development Team
+
+servers:
+  - url: https://api.acap.example.com/api/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+tags:
+  - name: Counties
+    description: County statistics endpoints for map visualization
+
+paths:
+  /counties/statistics:
+    get:
+      tags:
+        - Counties
+      summary: Get all county statistics
+      description: |
+        Returns aggregated statistics for all 22 Taiwan counties/cities.
+        Used to initialize the map view with county colors (green = has data, gray = no data).
+        Results are cached in Redis for 15 minutes.
+      operationId: getAllCountyStatistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: County statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllCountyStatisticsResponse'
+              examples:
+                success:
+                  summary: Successful retrieval
+                  value:
+                    data:
+                      counties:
+                        - county_name: "臺北市"
+                          school_count: 150
+                          student_count: 3200
+                          has_data: true
+                        - county_name: "新北市"
+                          school_count: 200
+                          student_count: 4500
+                          has_data: true
+                        - county_name: "花蓮縣"
+                          school_count: 0
+                          student_count: 0
+                          has_data: false
+                      total: 22
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  summary: Missing authentication token
+                  value:
+                    error:
+                      code: UNAUTHORIZED
+                      message: Authentication token required
+                      status: 401
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Database connection failure
+                  value:
+                    error:
+                      code: INTERNAL_ERROR
+                      message: Unable to retrieve county statistics
+                      status: 500
+
+  /counties/{countyName}/statistics:
+    get:
+      tags:
+        - Counties
+      summary: Get specific county statistics
+      description: |
+        Returns statistics for a specific county/city by name.
+        Used when user clicks on a county to show popup with detailed stats.
+        Results are cached in Redis for 15 minutes.
+      operationId: getCountyStatistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: countyName
+          in: path
+          required: true
+          description: |
+            County or city name in traditional Chinese (e.g., "臺北市", "新北市").
+            Must be one of the 22 valid Taiwan county/city names.
+          schema:
+            type: string
+            example: "臺北市"
+      responses:
+        '200':
+          description: County statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountyStatisticsResponse'
+              examples:
+                withData:
+                  summary: County with data
+                  value:
+                    data:
+                      county_name: "臺北市"
+                      school_count: 150
+                      student_count: 3200
+                      has_data: true
+                noData:
+                  summary: County without data
+                  value:
+                    data:
+                      county_name: "花蓮縣"
+                      school_count: 0
+                      student_count: 0
+                      has_data: false
+        '400':
+          description: Bad request (invalid county name format)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidName:
+                  summary: Invalid county name
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: County name must be a non-empty string
+                      status: 400
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: County not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: County name not recognized
+                  value:
+                    error:
+                      code: COUNTY_NOT_FOUND
+                      message: County name not recognized. Must be one of the 22 Taiwan counties/cities.
+                      status: 404
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login (feature 001-user-auth)
+
+  schemas:
+    CountyStatistics:
+      type: object
+      properties:
+        county_name:
+          type: string
+          description: County or city name in traditional Chinese
+          example: "臺北市"
+        school_count:
+          type: integer
+          format: int32
+          description: Number of schools in this county
+          example: 150
+          minimum: 0
+        student_count:
+          type: integer
+          format: int32
+          description: Total number of students in this county
+          example: 3200
+          minimum: 0
+        has_data:
+          type: boolean
+          description: Whether this county has any registered schools (school_count > 0)
+          example: true
+      required:
+        - county_name
+        - school_count
+        - student_count
+        - has_data
+
+    AllCountyStatistics:
+      type: object
+      properties:
+        counties:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountyStatistics'
+          description: Statistics for all counties
+          minItems: 0
+          maxItems: 22
+        total:
+          type: integer
+          format: int32
+          description: Total number of counties (always 22 for Taiwan)
+          example: 22
+          minimum: 22
+          maximum: 22
+      required:
+        - counties
+        - total
+
+    CountyStatisticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/CountyStatistics'
+      required:
+        - data
+
+    AllCountyStatisticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AllCountyStatistics'
+      required:
+        - data
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              enum:
+                - VALIDATION_ERROR
+                - COUNTY_NOT_FOUND
+                - UNAUTHORIZED
+                - INTERNAL_ERROR
+              example: COUNTY_NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: County name not recognized
+            status:
+              type: integer
+              description: HTTP status code
+              example: 404
+          required:
+            - code
+            - message
+            - status
+      required:
+        - error
+
+security:
+  - BearerAuth: []  # All endpoints require authentication
