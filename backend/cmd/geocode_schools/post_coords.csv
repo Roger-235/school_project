@@ -1,0 +1,111 @@
+
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="zh-tw">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=big5">
+<title>中華郵政全球資訊網 404 錯誤處理</title>
+<script language="JavaScript" type="text/JavaScript">
+<!--
+function MM_openBrWindow(theURL,winName,features) { //v2.0
+  window.open(theURL,winName,features);
+}
+//-->
+</script>
+<style type="text/css">
+	A:link {color: #0099FF; text-decoration: none}
+	A:visited {color:#0099FF;text-decoration: none}
+	A:hover {color: #0099FF;text-decoration: underline}
+	A:active {color: #0099FF;	text-decoration: underline}
+</style>
+</head>
+<script>
+<!--
+function Homepage(){
+	DocURL = document.URL;
+	protocolIndex=DocURL.indexOf("://",4);
+	serverIndex=DocURL.indexOf("/",protocolIndex + 3);
+	BeginURL=DocURL.indexOf("#",1) + 1;
+	urlresult=DocURL.substring(BeginURL,serverIndex);
+	displayresult=DocURL.substring(protocolIndex + 3 ,serverIndex);
+	InsertElementAnchor(urlresult, displayresult);
+}
+
+function HtmlEncode(text) {
+    return text.replace(/&/g, '&amp').replace(/'/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function TagAttrib(name, value) {
+    return ' '+name+'="'+HtmlEncode(value)+'"';
+}
+
+function PrintTag(tagName, needCloseTag, attrib, inner){
+    document.write( '<' + tagName + attrib + '>' + HtmlEncode(inner) );
+    if (needCloseTag) document.write( '</' + tagName +'>' );
+}
+
+function URI(href) {
+    IEVer = window.navigator.appVersion;
+    IEVer = IEVer.substr( IEVer.indexOf('MSIE') + 5, 3 );
+
+    return (IEVer.charAt(1)=='.' && IEVer >= '5.5') ?
+        encodeURI(href) :
+        escape(href).replace(/%3A/g, ':').replace(/%3B/g, ';');
+}
+
+function InsertElementAnchor(href, text) {
+    PrintTag('A', true, TagAttrib('HREF', URI(href)), text);
+}
+//-->
+</script>
+<body leftmargin="0" topmargin="0">
+<table width="100%" height="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td height="97" colspan="2" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td background="http://www.post.gov.tw/post/SystemErrorPage/images/banner_bg_nosearch.gif"><img src="http://www.post.gov.tw/post/SystemErrorPage/images/banner_nosearch.gif" width="345" height="97" alt="" ></td>
+</tr>
+</table></td>
+</tr>
+<tr>
+<td width="1%" valign="top"> <img src="http://www.post.gov.tw/post/SystemErrorPage/images/leftbar_nosearch.gif" width="16" height="300" alt="" ></td>
+<td align="center" valign="top"><table width="90%" border="0" cellspacing="0" cellpadding="3">
+<tr>
+
+</tr>
+<tr>
+<td width="2%"  > <img src="http://www.post.gov.tw/post/SystemErrorPage/images/arrow_nosearch.gif" width="66" height="23" alt="" ></td>
+<td  ><h4>找不到這個網頁</h4></td>
+</tr>
+<tr>
+<td colspan="2" background="http://www.post.gov.tw/post/SystemErrorPage/images/line_nosearch.gif"> <img src="http://www.post.gov.tw/post/SystemErrorPage/images/tra.gif" width="5" height="15" alt="" ></td>
+</tr>
+<tr>
+<td colspan="2"><font size="2">您所要找的網頁可能已經被移除了，可能是它的名稱已經變更，或暫時無法使用。</font></td>
+</tr>
+<tr>
+<td align="right"> <img src="http://www.post.gov.tw/post/SystemErrorPage/images/arrow_small_nosearch.gif" width="12" height="9" alt="" ></td>
+<td><font size="2">開啟<a href="https://www.post.gov.tw/post/internet/Group/default.jsp" title="移至首頁">首頁</a>，然後查看您想尋找之資訊的連結。</font></td>
+</tr>
+<tr>
+<td align="right"> <img src="http://www.post.gov.tw/post/SystemErrorPage/images/arrow_small_nosearch.gif" width="12" height="9" alt="" ></td>
+<td><font size="2">按一下<a href="javascript:history.back(1)">上一頁</a>按鈕，試試其他的連結</font></td>
+</tr>
+</table></td>
+</tr>
+<tr align="center">
+<td colspan="2" valign="top"><font color="#336600" size="2">感謝您的蒞臨，若您對中華郵政公司服務有任何建議，<a href="mailto:eyes@mail.post.gov.tw"><img src="http://www.post.gov.tw/post/SystemErrorPage/images/icon_mail.gif" border="0" width="20" height="16" alt="mail" >請惠賜教</a></font></td>
+</tr>
+<tr valign="bottom">
+<td colspan="2"> <table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td bgcolor="434343"> <font color="#FFFFFF" face="Verdana, Arial, Helvetica, sans-serif">
+<img src="http://www.post.gov.tw/post/SystemErrorPage/images/tra.gif" width="7" height="10"  alt="" ><font size="2">版本建議MSIE 5.0以上　最佳解析度800X600</font><img src="http://www.post.gov.tw/post/SystemErrorPage/images/tra.gif" width="7" height="10" alt="" ></font></td>
+<td width="240" bgcolor="1D8815"> <img src="http://www.post.gov.tw/post/SystemErrorPage/images/post_all_backgroup03.gif" width="237" height="23" border="0" alt="" ></td>
+</tr>
+</table></td>
+</tr>
+</table>
+</body>
+</html>

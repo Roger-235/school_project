@@ -107,6 +107,10 @@ export default function CountyPopup({ countyName, position, onClose }: CountyPop
                   <span className="stat-label">學童總數</span>
                   <span className="stat-value">{(data as any).data.student_count.toLocaleString()}</span>
                 </div>
+                <div className="stat-item">
+                  <span className="stat-label">運動記錄數</span>
+                  <span className="stat-value">{(data as any).data.record_count?.toLocaleString() || 0}</span>
+                </div>
               </div>
             ) : (
               <div className="popup-no-data">

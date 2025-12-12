@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/wei979/ICACP/backend/config"
+	"github.com/wei979/ICACP/backend/internal/database"
 	"github.com/wei979/ICACP/backend/internal/handlers"
 	"github.com/wei979/ICACP/backend/internal/services"
 	"gorm.io/driver/mysql"
@@ -24,6 +25,11 @@ func main() {
 	db, err := initDatabase()
 	if err != nil {
 		log.Fatal("Failed to initialize database:", err)
+	}
+
+	// Run migrations and seed data
+	if err := database.MigrateAndSeed(db); err != nil {
+		log.Fatal("Failed to run migrations:", err)
 	}
 
 	// Initialize Redis
@@ -58,6 +64,70 @@ func main() {
 		countyRoutes.GET("/:countyName/statistics", countyHandler.GetCountyStatistics)
 	}
 
+	// School routes
+	schoolService := services.NewSchoolService(db)
+	schoolHandler := handlers.NewSchoolHandler(schoolService)
+
+	schoolRoutes := v1.Group("/schools")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// schoolRoutes.Use(authMiddleware())
+	{
+		schoolRoutes.GET("/map", schoolHandler.GetForMap) // Must be before /:id
+		schoolRoutes.GET("", schoolHandler.List)
+		schoolRoutes.GET("/:id", schoolHandler.Get)
+		schoolRoutes.POST("", schoolHandler.Create)
+		schoolRoutes.PUT("/:id", schoolHandler.Update)
+		schoolRoutes.DELETE("/:id", schoolHandler.Delete)
+	}
+
+	// Student routes
+	studentService := services.NewStudentService(db)
+	studentHandler := handlers.NewStudentHandler(studentService)
+
+	studentRoutes := v1.Group("/students")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// studentRoutes.Use(authMiddleware())
+	{
+		studentRoutes.GET("", studentHandler.List)
+		studentRoutes.GET("/:id", studentHandler.Get)
+		studentRoutes.GET("/:id/records", studentHandler.GetWithRecords)
+		studentRoutes.POST("", studentHandler.Create)
+		studentRoutes.PUT("/:id", studentHandler.Update)
+		studentRoutes.DELETE("/:id", studentHandler.Delete)
+	}
+
+	// Sport type routes
+	sportTypeService := services.NewSportTypeService(db)
+	sportTypeHandler := handlers.NewSportTypeHandler(sportTypeService)
+
+	sportTypeRoutes := v1.Group("/sport-types")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// sportTypeRoutes.Use(authMiddleware())
+	{
+		sportTypeRoutes.GET("", sportTypeHandler.List)
+		sportTypeRoutes.GET("/categories", sportTypeHandler.GetCategories)
+		sportTypeRoutes.GET("/:id", sportTypeHandler.Get)
+	}
+
+	// Sport record routes
+	sportRecordService := services.NewSportRecordService(db)
+	sportRecordHandler := handlers.NewSportRecordHandler(sportRecordService)
+
+	sportRecordRoutes := v1.Group("/sport-records")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// sportRecordRoutes.Use(authMiddleware())
+	{
+		sportRecordRoutes.GET("", sportRecordHandler.List)
+		sportRecordRoutes.GET("/trend", sportRecordHandler.GetTrend)
+		sportRecordRoutes.GET("/progress", sportRecordHandler.GetProgress)
+		sportRecordRoutes.GET("/ranking", sportRecordHandler.GetSchoolRanking)
+		sportRecordRoutes.GET("/:id", sportRecordHandler.Get)
+		sportRecordRoutes.GET("/:id/history", sportRecordHandler.GetHistory)
+		sportRecordRoutes.POST("", sportRecordHandler.Create)
+		sportRecordRoutes.PUT("/:id", sportRecordHandler.Update)
+		sportRecordRoutes.DELETE("/:id", sportRecordHandler.Delete)
+	}
+
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -87,15 +157,42 @@ func initDatabase() (*gorm.DB, error) {
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		frontendURL := os.Getenv("FRONTEND_URL")
-		if frontendURL == "" {
-			frontendURL = "http://localhost:3000"
+		origin := c.Request.Header.Get("Origin")
+
+		// Allow localhost with various ports (3000-3009) for development
+		allowedOrigins := []string{
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"http://localhost:3002",
+			"http://localhost:3003",
+			"http://localhost:3004",
+			"http://localhost:3005",
 		}
 
-		c.Writer.Header().Set("Access-Control-Allow-Origin", frontendURL)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+		// Check if origin is in allowed list
+		allowOrigin := ""
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				allowOrigin = origin
+				break
+			}
+		}
+
+		// Fallback to FRONTEND_URL environment variable
+		if allowOrigin == "" {
+			frontendURL := os.Getenv("FRONTEND_URL")
+			if frontendURL != "" && origin == frontendURL {
+				allowOrigin = frontendURL
+			}
+		}
+
+		// If origin is allowed, set CORS headers
+		if allowOrigin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+		}
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
