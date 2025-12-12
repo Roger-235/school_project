@@ -2,6 +2,7 @@
  * Map Page - 台灣地圖視覺化主頁面
  * Feature: 002-map-visualization
  * Updated: 004-navigation-enhancement - Use MainLayout with fullWidth mode
+ * Updated: 006-school-map-markers - Add school markers with detail panel
  * User Story 1: View Taiwan Map Overview (Priority: P1)
  */
 
@@ -13,7 +14,9 @@ import Head from 'next/head';
 import MainLayout from '../components/layout/MainLayout';
 import { useAllCountyStats } from '../hooks/useCountyStats';
 import { useMapState } from '../hooks/useMapState';
+import { useSchoolsForMap, getSchoolsFromResponse } from '../hooks/useSchoolsForMap';
 import CountyPopup from '../components/map/CountyPopup';
+import type { SchoolMapData } from '../types/schoolMap';
 
 // 動態載入地圖元件（避免 SSR 問題）
 const MapView = dynamic(() => import('../components/map/MapView'), {
@@ -36,15 +39,43 @@ const MapControls = dynamic(() => import('../components/map/MapControls'), {
   ssr: false,
 });
 
+const SchoolMarkerLayer = dynamic(() => import('../components/map/SchoolMarkerLayer'), {
+  ssr: false,
+});
+
+const SchoolDetailPanel = dynamic(() => import('../components/map/SchoolDetailPanel'), {
+  ssr: false,
+});
+
 export default function MapPage() {
   const [isMobile, setIsMobile] = useState(false);
   const { data, isLoading, error, refetch } = useAllCountyStats();
   const { selectedCounty, selectCounty, clearSelection } = useMapState();
 
+  // School markers state (Feature: 006-school-map-markers)
+  const { data: schoolsData, isLoading: schoolsLoading } = useSchoolsForMap();
+  const [selectedSchool, setSelectedSchool] = useState<SchoolMapData | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
   // 處理縣市點擊事件
   const handleCountyClick = useCallback((countyName: string, position: { x: number; y: number }) => {
     selectCounty(countyName, position);
   }, [selectCounty]);
+
+  // 處理學校標記點擊事件
+  const handleSchoolClick = useCallback((school: SchoolMapData) => {
+    setSelectedSchool(school);
+    setIsPanelOpen(true);
+    // Close county popup when clicking a school
+    clearSelection();
+  }, [clearSelection]);
+
+  // 關閉學校詳情面板
+  const handleClosePanel = useCallback(() => {
+    setIsPanelOpen(false);
+    // Delay clearing selected school to allow animation
+    setTimeout(() => setSelectedSchool(null), 300);
+  }, []);
 
   // 檢查是否為桌面裝置
   useEffect(() => {
@@ -156,6 +187,14 @@ export default function MapPage() {
                     countyStats={(data as any).data.counties}
                     onCountyClick={handleCountyClick}
                   />
+                  {/* School markers (Feature: 006-school-map-markers) */}
+                  {!schoolsLoading && schoolsData && (
+                    <SchoolMarkerLayer
+                      map={map}
+                      schools={getSchoolsFromResponse(schoolsData)}
+                      onSchoolClick={handleSchoolClick}
+                    />
+                  )}
                   <MapControls map={map} />
                 </>
               )}
@@ -169,6 +208,13 @@ export default function MapPage() {
                 onClose={clearSelection}
               />
             )}
+
+            {/* 學校詳情側邊面板 (Feature: 006-school-map-markers) */}
+            <SchoolDetailPanel
+              schoolId={selectedSchool?.id ?? null}
+              isOpen={isPanelOpen}
+              onClose={handleClosePanel}
+            />
           </>
         )}
 
@@ -179,11 +225,19 @@ export default function MapPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-green-500 rounded"></div>
-                <span className="text-sm text-gray-700">有資料</span>
+                <span className="text-sm text-gray-700">有資料縣市</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 bg-gray-400 rounded"></div>
-                <span className="text-sm text-gray-700">無資料</span>
+                <span className="text-sm text-gray-700">無資料縣市</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="14" height="14">
+                    <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3z"/>
+                  </svg>
+                </div>
+                <span className="text-sm text-gray-700">學校位置</span>
               </div>
             </div>
             {data && (
@@ -192,8 +246,13 @@ export default function MapPage() {
                   總計 {(data as any).data.total} 個縣市
                 </p>
                 <p className="text-xs text-gray-500">
-                  {(data as any).data.counties.filter((c: any) => c.has_data).length} 個縣市有資料
+                  {((data as any).data.counties || []).filter((c: any) => c.has_data).length} 個縣市有資料
                 </p>
+                {schoolsData && (
+                  <p className="text-xs text-gray-500">
+                    {getSchoolsFromResponse(schoolsData).length} 所學校
+                  </p>
+                )}
               </div>
             )}
           </div>

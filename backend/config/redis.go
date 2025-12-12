@@ -15,7 +15,11 @@ var (
 	ctx         = context.Background()
 )
 
+// RedisAvailable indicates whether Redis connection is available
+var RedisAvailable bool
+
 // InitRedis initializes the Redis client with connection pooling
+// Returns nil even if Redis is unavailable (caching will be disabled)
 func InitRedis() error {
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
@@ -39,10 +43,14 @@ func InitRedis() error {
 	// Test connection
 	_, err := RedisClient.Ping(ctx).Result()
 	if err != nil {
-		return fmt.Errorf("failed to connect to Redis: %w", err)
+		fmt.Printf("⚠ Warning: Redis not available (%v) - caching disabled\n", err)
+		RedisClient = nil
+		RedisAvailable = false
+		return nil // Don't fail, just disable caching
 	}
 
 	fmt.Println("✓ Connected to Redis successfully")
+	RedisAvailable = true
 	return nil
 }
 

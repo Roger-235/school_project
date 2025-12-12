@@ -45,17 +45,21 @@ func (s *CountyService) GetAllCountyStatistics() (*models.AllCountyStatistics, e
 	// Cache miss: query database
 	fmt.Println("Cache miss for all county statistics - querying database")
 
-	var stats []models.CountyStatistics
+	// Initialize as empty slice (not nil) to ensure JSON serializes to [] instead of null
+	stats := make([]models.CountyStatistics, 0)
 
-	// Aggregation query: GROUP BY county_name, COUNT schools, COUNT students
+	// Aggregation query: GROUP BY county_name, COUNT schools, COUNT students, COUNT sport_records
 	err = s.db.Table("schools").
 		Select(`
 			schools.county_name,
 			COUNT(DISTINCT schools.id) as school_count,
-			COUNT(students.id) as student_count,
+			COUNT(DISTINCT students.id) as student_count,
+			COUNT(sport_records.id) as record_count,
 			(COUNT(DISTINCT schools.id) > 0) as has_data
 		`).
-		Joins("LEFT JOIN students ON students.school_id = schools.id").
+		Joins("LEFT JOIN students ON students.school_id = schools.id AND students.deleted_at IS NULL").
+		Joins("LEFT JOIN sport_records ON sport_records.student_id = students.id AND sport_records.deleted_at IS NULL").
+		Where("schools.deleted_at IS NULL").
 		Group("schools.county_name").
 		Scan(&stats).Error
 
@@ -107,11 +111,13 @@ func (s *CountyService) GetCountyStatistics(countyName string) (*models.CountySt
 		Select(`
 			schools.county_name,
 			COUNT(DISTINCT schools.id) as school_count,
-			COUNT(students.id) as student_count,
+			COUNT(DISTINCT students.id) as student_count,
+			COUNT(sport_records.id) as record_count,
 			(COUNT(DISTINCT schools.id) > 0) as has_data
 		`).
-		Joins("LEFT JOIN students ON students.school_id = schools.id").
-		Where("schools.county_name = ?", countyName).
+		Joins("LEFT JOIN students ON students.school_id = schools.id AND students.deleted_at IS NULL").
+		Joins("LEFT JOIN sport_records ON sport_records.student_id = students.id AND sport_records.deleted_at IS NULL").
+		Where("schools.county_name = ? AND schools.deleted_at IS NULL", countyName).
 		Group("schools.county_name").
 		Scan(&stats).Error
 
@@ -125,6 +131,7 @@ func (s *CountyService) GetCountyStatistics(countyName string) (*models.CountySt
 			CountyName:   countyName,
 			SchoolCount:  0,
 			StudentCount: 0,
+			RecordCount:  0,
 			HasData:      false,
 		}
 	}
@@ -141,6 +148,9 @@ func (s *CountyService) GetCountyStatistics(countyName string) (*models.CountySt
 // Helper methods for caching (to be implemented in user story tasks)
 
 func (s *CountyService) getCachedAllStats() (*models.AllCountyStatistics, error) {
+	if s.redisClient == nil {
+		return nil, nil // Redis not available, skip caching
+	}
 	cacheKey := "county:stats:all"
 	cached, err := s.redisClient.Get(s.ctx, cacheKey).Result()
 	if err == redis.Nil {
@@ -159,6 +169,9 @@ func (s *CountyService) getCachedAllStats() (*models.AllCountyStatistics, error)
 }
 
 func (s *CountyService) cacheAllStats(stats *models.AllCountyStatistics) error {
+	if s.redisClient == nil {
+		return nil // Redis not available, skip caching
+	}
 	cacheKey := "county:stats:all"
 	jsonData, err := json.Marshal(stats)
 	if err != nil {
@@ -174,6 +187,9 @@ func (s *CountyService) cacheAllStats(stats *models.AllCountyStatistics) error {
 }
 
 func (s *CountyService) getCachedCountyStats(countyName string) (*models.CountyStatistics, error) {
+	if s.redisClient == nil {
+		return nil, nil // Redis not available, skip caching
+	}
 	cacheKey := fmt.Sprintf("county:stats:%s", countyName)
 	cached, err := s.redisClient.Get(s.ctx, cacheKey).Result()
 	if err == redis.Nil {
@@ -192,6 +208,9 @@ func (s *CountyService) getCachedCountyStats(countyName string) (*models.CountyS
 }
 
 func (s *CountyService) cacheCountyStats(stats *models.CountyStatistics) error {
+	if s.redisClient == nil {
+		return nil // Redis not available, skip caching
+	}
 	cacheKey := fmt.Sprintf("county:stats:%s", stats.CountyName)
 	jsonData, err := json.Marshal(stats)
 	if err != nil {

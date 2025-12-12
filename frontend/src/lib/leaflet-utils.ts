@@ -17,12 +17,13 @@ export const DEFAULT_ZOOM = 7;
 
 /**
  * Map configuration options
+ * Updated: Increased maxZoom to 16 for better school marker visibility
  */
 export const MAP_CONFIG = {
   center: TAIWAN_CENTER,
   zoom: DEFAULT_ZOOM,
   minZoom: 6,
-  maxZoom: 12,
+  maxZoom: 16,              // Increased from 12 to allow closer zoom for school markers
   scrollWheelZoom: true,
   doubleClickZoom: true,
   dragging: true,
@@ -31,13 +32,14 @@ export const MAP_CONFIG = {
 
 /**
  * County color based on data availability
+ * Updated: Reduced opacity to allow underlying map features to show through
  */
 export const COUNTY_COLORS = {
   hasData: '#22c55e',      // Green for counties with data
   noData: '#9ca3af',        // Gray for counties without data
-  border: '#ffffff',        // White border
-  hoverOpacity: 0.8,        // Opacity on hover
-  defaultOpacity: 0.7,      // Default opacity
+  border: '#374151',        // Dark gray border for better visibility
+  hoverOpacity: 0.4,        // Opacity on hover (was 0.8)
+  defaultOpacity: 0.25,     // Default opacity (was 0.7) - allows map features to show through
 };
 
 /**
@@ -46,8 +48,8 @@ export const COUNTY_COLORS = {
 export function getCountyStyle(hasData: boolean) {
   return {
     fillColor: hasData ? COUNTY_COLORS.hasData : COUNTY_COLORS.noData,
-    weight: 1,
-    opacity: 1,
+    weight: 2,              // Increased from 1 for better visibility
+    opacity: 0.8,           // Border opacity
     color: COUNTY_COLORS.border,
     fillOpacity: COUNTY_COLORS.defaultOpacity,
   };
@@ -59,7 +61,8 @@ export function getCountyStyle(hasData: boolean) {
 export function getCountyHoverStyle() {
   return {
     fillOpacity: COUNTY_COLORS.hoverOpacity,
-    weight: 2,
+    weight: 3,              // Thicker border on hover
+    opacity: 1,             // Full border opacity on hover
   };
 }
 
@@ -91,3 +94,28 @@ export const OSM_TILE_LAYER = {
   url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
+
+/**
+ * Normalize Taiwan county names
+ * TopoJSON uses simplified "台" while database uses traditional "臺"
+ * This function converts simplified to traditional for consistent matching
+ */
+export function normalizeCountyName(name: string): string {
+  if (!name) return name;
+  // Replace simplified 台 with traditional 臺
+  return name
+    .replace(/^台北市$/, '臺北市')
+    .replace(/^台中市$/, '臺中市')
+    .replace(/^台南市$/, '臺南市')
+    .replace(/^台東縣$/, '臺東縣');
+}
+
+/**
+ * Convert traditional county name back to simplified for display
+ * (if needed for TopoJSON tooltip display)
+ */
+export function displayCountyName(name: string): string {
+  if (!name) return name;
+  // Keep original name for display (TopoJSON uses simplified)
+  return name;
+}

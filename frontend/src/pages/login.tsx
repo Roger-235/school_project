@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { useMutation } from '@tanstack/react-query'
-import api from '../lib/api'
+import axios from 'axios'
 import { setAuthToken } from '../lib/auth'
 import { useAuth } from '../context/AuthContext'
 import { loginSchema, LoginForm } from '../lib/validation'
+
+// 登入 API 使用本地 Mock API（後端認證尚未實作）
+const authApi = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+})
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -15,11 +21,13 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      const response = await api.post('/auth/login', data)
+      const response = await authApi.post('/auth/login', data)
       return response.data
     },
     onSuccess: (data) => {
       setAuthToken(data.data.token)
+      // Store user in localStorage for session persistence
+      localStorage.setItem('auth_user', JSON.stringify(data.data.user))
       setUser(data.data.user)
       router.push('/dashboard')
     },

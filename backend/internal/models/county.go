@@ -1,11 +1,12 @@
 package models
 
 // CountyStatistics represents aggregated statistics for a Taiwan county/city
-// This is a non-persisted model calculated on-demand from schools and students tables
+// This is a non-persisted model calculated on-demand from schools, students, and sport_records tables
 type CountyStatistics struct {
 	CountyName   string `json:"county_name" gorm:"column:county_name"`
 	SchoolCount  int    `json:"school_count" gorm:"column:school_count"`
 	StudentCount int    `json:"student_count" gorm:"column:student_count"`
+	RecordCount  int    `json:"record_count" gorm:"column:record_count"`
 	HasData      bool   `json:"has_data" gorm:"column:has_data"`
 }
 

@@ -1,14 +1,18 @@
 /**
  * CountyLayer - GeoJSON 圖層元件，負責渲染台灣縣市邊界與顏色
  * Feature: 002-map-visualization
+ * Updated: Use official Taiwan TopoJSON with real county boundaries
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
 import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON } from 'leaflet';
+import * as topojson from 'topojson-client';
+import type { Topology, GeometryCollection } from 'topojson-specification';
+import type { FeatureCollection, Geometry } from 'geojson';
 import type { CountyStatistics } from '../../types/county';
-import { getCountyStyle, getCountyHoverStyle } from '../../lib/leaflet-utils';
+import { getCountyStyle, getCountyHoverStyle, normalizeCountyName } from '../../lib/leaflet-utils';
 
 interface CountyLayerProps {
   map: LeafletMap;
@@ -24,11 +28,17 @@ export default function CountyLayer({ map, countyStats, onCountyClick }: CountyL
       return;
     }
 
-    // 動態載入 Leaflet 和 GeoJSON 資料
+    // 動態載入 Leaflet 和 TopoJSON 資料
     Promise.all([
       import('leaflet'),
-      fetch('/data/taiwan-counties.geojson').then(res => res.json())
-    ]).then(([L, geoJsonData]) => {
+      fetch('/data/taiwan-counties.topo.json').then(res => res.json())
+    ]).then(([L, topoData]) => {
+      // 將 TopoJSON 轉換為 GeoJSON
+      const geoJsonData = topojson.feature(
+        topoData as Topology<{ counties: GeometryCollection }>,
+        topoData.objects.counties
+      ) as FeatureCollection<Geometry>;
+
       // 清除舊的圖層
       if (geoJsonLayer) {
         map.removeLayer(geoJsonLayer);
@@ -44,13 +54,17 @@ export default function CountyLayer({ map, countyStats, onCountyClick }: CountyL
       const layer = L.geoJSON(geoJsonData, {
         style: (feature) => {
           const countyName = feature?.properties?.COUNTYNAME;
-          const stats = statsMap.get(countyName);
+          // Normalize county name (台→臺) for matching with database
+          const normalizedName = normalizeCountyName(countyName);
+          const stats = statsMap.get(normalizedName);
           const hasData = stats?.has_data ?? false;
           return getCountyStyle(hasData);
         },
         onEachFeature: (feature, layer) => {
           const countyName = feature.properties?.COUNTYNAME;
-          const stats = statsMap.get(countyName);
+          // Normalize county name for matching
+          const normalizedName = normalizeCountyName(countyName);
+          const stats = statsMap.get(normalizedName);
 
           // 滑鼠移入效果
           layer.on('mouseover', function (this: any) {
@@ -73,13 +87,15 @@ export default function CountyLayer({ map, countyStats, onCountyClick }: CountyL
           }
 
           // 點擊事件 - 顯示縣市統計彈窗
+          // Pass normalized name to API for proper data retrieval
           layer.on('click', (e: any) => {
             if (onCountyClick && countyName) {
               const position = {
                 x: e.originalEvent?.clientX || e.containerPoint?.x || 0,
                 y: e.originalEvent?.clientY || e.containerPoint?.y || 0,
               };
-              onCountyClick(countyName, position);
+              // Use normalized name for API call
+              onCountyClick(normalizedName, position);
             }
           });
         },

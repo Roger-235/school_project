@@ -7,9 +7,10 @@
  * Statistics for a single Taiwan county/city
  */
 export interface CountyStatistics {
-  county_name: string;      // County/city name in traditional Chinese (e.g., "臺北市")
+  county_name: string;       // County/city name in traditional Chinese (e.g., "臺北市")
   school_count: number;      // Number of schools in this county
   student_count: number;     // Total number of students in this county
+  record_count: number;      // Total number of sport records in this county
   has_data: boolean;         // Whether this county has any registered schools
 }
 

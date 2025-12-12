@@ -36,3 +36,11 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+temp_*.xls
+temp_*.xlsx
+
+# Duplicate/nested project folders
+ICACP/
+
+# Windows null device artifacts
+nul
