@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-01
 - N/A (純前端重構，無資料庫變更) (004-navigation-enhancement)
 - Go 1.21+ (backend), TypeScript/Next.js 14 (frontend) + Gin, GORM, Axios, React Query (005-data-source-unification)
 - MySQL 8.0+ (005-data-source-unification)
+- Go 1.21+ (backend), TypeScript 5.x with Next.js 14 Pages Router (frontend) + Gin (routing), GORM (ORM), excelize (Excel parsing), React Hook Form + Zod (form validation), React Query (data fetching) (007-excel-batch-import)
+- MySQL 8.0+ (existing database with students, sport_records, sport_types tables) (007-excel-batch-import)
 
 - Go 1.21+ (backend), TypeScript with Next.js 14 Pages Router (frontend) (001-user-auth)
 - Leaflet.js 1.9.4 + React-Leaflet 4.2.1 for map visualization (002-map-visualization)
@@ -99,10 +101,10 @@ Go 1.21+ (backend), TypeScript with Next.js 14 Pages Router (frontend): Follow s
 - `GET /api/v1/sport-records/trend` - Get student performance trend
 
 ## Recent Changes
+- 007-excel-batch-import: Added Go 1.21+ (backend), TypeScript 5.x with Next.js 14 Pages Router (frontend) + Gin (routing), GORM (ORM), excelize (Excel parsing), React Hook Form + Zod (form validation), React Query (data fetching)
 - 005-data-source-unification: Added Go 1.21+ (backend), TypeScript/Next.js 14 (frontend) + Gin, GORM, Axios, React Query
 - 004-navigation-enhancement: Added TypeScript 5.x with Next.js 14 (Pages Router) + React 18, Next.js 14, MainLayout component, Header component, Breadcrumb component
 
-- 001-user-auth: Added Go 1.21+ (backend), TypeScript with Next.js 14 Pages Router (frontend)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

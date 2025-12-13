@@ -128,6 +128,31 @@ func main() {
 		sportRecordRoutes.DELETE("/:id", sportRecordHandler.Delete)
 	}
 
+	// Import routes (Excel batch import)
+	importService := services.NewImportService(db)
+	templateService := services.NewTemplateService()
+	importHandler := handlers.NewImportHandler(importService, templateService)
+
+	importRoutes := v1.Group("/import")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// importRoutes.Use(authMiddleware())
+	{
+		// Template downloads
+		importRoutes.GET("/templates/students", importHandler.DownloadStudentTemplate)
+		importRoutes.GET("/templates/records", importHandler.DownloadRecordsTemplate)
+
+		// Student import
+		importRoutes.POST("/students/preview", importHandler.PreviewStudentImport)
+		importRoutes.POST("/students/execute", importHandler.ExecuteStudentImport)
+
+		// Records import
+		importRoutes.POST("/records/preview", importHandler.PreviewRecordsImport)
+		importRoutes.POST("/records/execute", importHandler.ExecuteRecordsImport)
+
+		// Cancel preview
+		importRoutes.DELETE("/preview/:preview_id", importHandler.CancelPreview)
+	}
+
 	// Start server
 	port := os.Getenv("PORT")
 	if port == "" {
