@@ -37,7 +37,7 @@ export default function CountyLayer({ map, countyStats, onCountyClick }: CountyL
       const geoJsonData = topojson.feature(
         topoData as Topology<{ counties: GeometryCollection }>,
         topoData.objects.counties
-      ) as FeatureCollection<Geometry>;
+      ) as unknown as FeatureCollection<Geometry>;
 
       // 清除舊的圖層
       if (geoJsonLayer) {
