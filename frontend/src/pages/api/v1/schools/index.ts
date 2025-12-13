@@ -214,6 +214,16 @@ function handlePost(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const now = new Date().toISOString();
+  // Infer school type from name
+  let schoolType = '其他';
+  if (name.includes('國小') || name.includes('國民小學')) {
+    schoolType = '國小';
+  } else if (name.includes('國中') || name.includes('國民中學')) {
+    schoolType = '國中';
+  } else if (name.includes('高中') || name.includes('高級中學') || name.includes('高級中等學校')) {
+    schoolType = '高中';
+  }
+
   const newSchool = {
     id: nextSchoolId++,
     name,
@@ -222,6 +232,7 @@ function handlePost(req: NextApiRequest, res: NextApiResponse) {
     district: district || '',
     address: address || '',
     phone: phone || '',
+    type: schoolType,
     created_at: now,
     updated_at: now,
   };
