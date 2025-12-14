@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import type { SchoolMapResponse, SchoolMapData } from '../types/schoolMap';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 /**
  * Fetch all schools with coordinates for map display

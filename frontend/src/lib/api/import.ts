@@ -5,7 +5,7 @@ import {
   ExecuteImportRequest,
 } from '@/types/import';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 // Create axios instance for import API
 const importAxios = axios.create({
