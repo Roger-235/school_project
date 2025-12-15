@@ -1,6 +1,8 @@
 import axios from 'axios'
 
 const api = axios.create({
+  // In production: /backend (proxied to real backend via Vercel rewrites)
+  // In development: /api/v1 (uses Next.js mock API routes)
   baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
