@@ -101,7 +101,10 @@ export function downloadStudentTemplate() {
 
 /**
  * Helper function to download records template
+ * @param schoolId - Optional school ID to pre-fill students
+ * @param grade - Optional grade (required if schoolId is provided)
+ * @param className - Optional class name
  */
-export function downloadRecordsTemplate() {
-  importApi.downloadRecordsTemplate();
+export function downloadRecordsTemplate(schoolId?: number, grade?: number, className?: string) {
+  importApi.downloadRecordsTemplate(schoolId, grade, className);
 }

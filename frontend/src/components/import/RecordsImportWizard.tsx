@@ -213,13 +213,19 @@ export function RecordsImportWizard() {
                 <p className="text-sm text-gray-600 mb-2">需要模板？</p>
                 <button
                   type="button"
-                  onClick={downloadRecordsTemplate}
+                  onClick={() => {
+                    if (canProceedToUpload && selectedSchool && grade !== null) {
+                      downloadRecordsTemplate(selectedSchool.id, grade, className.trim());
+                    } else {
+                      downloadRecordsTemplate();
+                    }
+                  }}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  下載運動記錄模板
+                  {canProceedToUpload ? '下載含學生名單的模板' : '下載運動記錄模板'}
                 </button>
               </div>
 
@@ -282,13 +288,19 @@ export function RecordsImportWizard() {
               </button>
               <button
                 type="button"
-                onClick={downloadRecordsTemplate}
+                onClick={() => {
+                  if (selectedSchool && grade !== null) {
+                    downloadRecordsTemplate(selectedSchool.id, grade, className.trim());
+                  } else {
+                    downloadRecordsTemplate();
+                  }
+                }}
                 className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                下載模板
+                下載含學生名單的模板
               </button>
             </div>
           </div>

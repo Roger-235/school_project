@@ -41,9 +41,23 @@ export const importApi = {
 
   /**
    * Download sport records Excel template
+   * @param schoolId - Optional school ID to pre-fill students
+   * @param grade - Optional grade (required if schoolId is provided)
+   * @param className - Optional class name
    */
-  downloadRecordsTemplate: () => {
-    const url = `${API_BASE}/import/templates/records`;
+  downloadRecordsTemplate: (schoolId?: number, grade?: number, className?: string) => {
+    let url = `${API_BASE}/import/templates/records`;
+
+    // Add query parameters if provided
+    if (schoolId && grade) {
+      const params = new URLSearchParams();
+      params.append('school_id', schoolId.toString());
+      params.append('grade', grade.toString());
+      if (className) {
+        params.append('class', className);
+      }
+      url += `?${params.toString()}`;
+    }
 
     const link = document.createElement('a');
     link.href = url;

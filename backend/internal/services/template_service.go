@@ -2,17 +2,21 @@ package services
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/xuri/excelize/v2"
 	"github.com/wei979/ICACP/backend/internal/models"
+	"gorm.io/gorm"
 )
 
 // TemplateService handles Excel template generation
-type TemplateService struct{}
+type TemplateService struct {
+	db *gorm.DB
+}
 
 // NewTemplateService creates a new TemplateService
-func NewTemplateService() *TemplateService {
-	return &TemplateService{}
+func NewTemplateService(db *gorm.DB) *TemplateService {
+	return &TemplateService{db: db}
 }
 
 // GenerateStudentTemplate creates a student list Excel template
@@ -235,6 +239,154 @@ func (s *TemplateService) GenerateRecordsTemplate() (*bytes.Buffer, error) {
 		"5. 空白的運動項目會自動跳過",
 		"6. 系統會新增記錄，不會覆蓋既有資料",
 		"7. 超出合理範圍的數值會顯示警告，但仍可匯入",
+		"",
+		"合理值範圍參考：",
+		"• 身高：80-250 cm",
+		"• 體重：10-200 kg",
+		"• 坐姿體前彎：-30 至 60 cm",
+		"• 立定跳遠：20-350 cm",
+		"• 仰臥起坐：0-100 次",
+		"• 心肺耐力：60-1800 秒",
+	}
+
+	for i, text := range instructions {
+		cell, _ := excelize.CoordinatesToCellName(1, i+1)
+		f.SetCellValue(instructionSheet, cell, text)
+	}
+
+	// Set active sheet to main sheet
+	idx, _ := f.GetSheetIndex(sheetName)
+	f.SetActiveSheet(idx)
+
+	// Write to buffer
+	buffer := new(bytes.Buffer)
+	if err := f.Write(buffer); err != nil {
+		return nil, err
+	}
+
+	return buffer, nil
+}
+
+// GenerateRecordsTemplateWithStudents creates a sport records template with actual students
+// from the specified school, grade, and optionally class
+func (s *TemplateService) GenerateRecordsTemplateWithStudents(schoolID uint, grade int, class string) (*bytes.Buffer, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database connection not available")
+	}
+
+	// Query students from database
+	var students []models.Student
+	query := s.db.Where("school_id = ? AND grade = ?", schoolID, grade)
+	if class != "" {
+		query = query.Where("class = ?", class)
+	}
+	query = query.Order("class ASC, student_number ASC")
+
+	if err := query.Find(&students).Error; err != nil {
+		return nil, fmt.Errorf("查詢學生資料失敗: %w", err)
+	}
+
+	if len(students) == 0 {
+		return nil, fmt.Errorf("找不到符合條件的學生（學校ID: %d, 年級: %d, 班級: %s）", schoolID, grade, class)
+	}
+
+	f := excelize.NewFile()
+	defer f.Close()
+
+	sheetName := "運動記錄"
+	f.SetSheetName("Sheet1", sheetName)
+
+	// Set column widths
+	f.SetColWidth(sheetName, "A", "A", 10)  // 座號
+	f.SetColWidth(sheetName, "B", "B", 15)  // 姓名
+	f.SetColWidth(sheetName, "C", "C", 12)  // 身高
+	f.SetColWidth(sheetName, "D", "D", 12)  // 體重
+	f.SetColWidth(sheetName, "E", "E", 15)  // 坐姿體前彎
+	f.SetColWidth(sheetName, "F", "F", 12)  // 立定跳遠
+	f.SetColWidth(sheetName, "G", "G", 18)  // 仰臥起坐
+	f.SetColWidth(sheetName, "H", "H", 12)  // 心肺耐力
+	f.SetColWidth(sheetName, "I", "I", 15)  // 測驗日期
+
+	// Set date column format to text to prevent Excel auto-conversion
+	textStyle, _ := f.NewStyle(&excelize.Style{
+		NumFmt: 49, // Text format (@ in Excel)
+	})
+	f.SetColStyle(sheetName, "I", textStyle)
+
+	// Create header style
+	headerStyle, _ := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 12,
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#DDEBF7"},
+			Pattern: 1,
+		},
+		Border: []excelize.Border{
+			{Type: "left", Color: "#000000", Style: 1},
+			{Type: "top", Color: "#000000", Style: 1},
+			{Type: "bottom", Color: "#000000", Style: 1},
+			{Type: "right", Color: "#000000", Style: 1},
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+
+	// Write headers
+	headers := models.RecordsTemplateHeaders
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheetName, cell, header)
+		f.SetCellStyle(sheetName, cell, cell, headerStyle)
+	}
+
+	// Write student data (座號, 姓名) - starting from row 2
+	for i, student := range students {
+		row := i + 2
+
+		// 座號 (column A)
+		cellA, _ := excelize.CoordinatesToCellName(1, row)
+		f.SetCellValue(sheetName, cellA, student.StudentNumber)
+
+		// 姓名 (column B)
+		cellB, _ := excelize.CoordinatesToCellName(2, row)
+		f.SetCellValue(sheetName, cellB, student.Name)
+
+		// Leave columns C-H empty for teachers to fill in
+		// Column I (測驗日期) also left empty
+	}
+
+	// Add instructions sheet
+	instructionSheet := "使用說明"
+	f.NewSheet(instructionSheet)
+	f.SetColWidth(instructionSheet, "A", "A", 80)
+
+	instructions := []string{
+		"運動記錄批次匯入模板 - 使用說明",
+		"",
+		fmt.Sprintf("此模板已載入 %d 位學生資料", len(students)),
+		"",
+		"欄位說明：",
+		"• 座號* (必填)：學生在班級中的座號（已自動填入）",
+		"• 姓名* (必填)：學生姓名（已自動填入）",
+		"• 身高(cm) (選填)：身高，單位公分",
+		"• 體重(kg) (選填)：體重，單位公斤",
+		"• 坐姿體前彎(cm) (選填)：坐姿體前彎成績，單位公分",
+		"• 立定跳遠(cm) (選填)：立定跳遠成績，單位公分",
+		"• 仰臥起坐(次/分鐘) (選填)：一分鐘內完成次數",
+		"• 心肺耐力(秒) (選填)：心肺耐力測驗時間，單位秒",
+		"• 測驗日期* (必填)：測驗日期，如 2025/03/15",
+		"",
+		"注意事項：",
+		"1. 座號和姓名已自動填入，請勿修改",
+		"2. 運動項目可以只填寫部分（如只測了身高體重）",
+		"3. 空白的運動項目會自動跳過",
+		"4. 系統會新增記錄，不會覆蓋既有資料",
+		"5. 超出合理範圍的數值會顯示警告，但仍可匯入",
 		"",
 		"合理值範圍參考：",
 		"• 身高：80-250 cm",

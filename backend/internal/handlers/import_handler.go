@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"net/http"
 	"strconv"
 
@@ -45,9 +46,52 @@ func (h *ImportHandler) DownloadStudentTemplate(c *gin.Context) {
 }
 
 // DownloadRecordsTemplate handles GET /api/v1/import/templates/records
+// Supports optional query parameters: school_id, grade, class
+// If provided, generates template with actual students from that school/grade/class
 func (h *ImportHandler) DownloadRecordsTemplate(c *gin.Context) {
-	// Generate template
-	buffer, err := h.templateService.GenerateRecordsTemplate()
+	var buffer *bytes.Buffer
+	var err error
+	var filename string
+
+	// Check for optional query parameters
+	schoolIDStr := c.Query("school_id")
+	gradeStr := c.Query("grade")
+	class := c.Query("class")
+
+	if schoolIDStr != "" && gradeStr != "" {
+		// Generate template with actual students
+		schoolID, parseErr := strconv.ParseUint(schoolIDStr, 10, 64)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": gin.H{
+					"code":    "INVALID_SCHOOL_ID",
+					"message": "無效的學校 ID",
+					"status":  400,
+				},
+			})
+			return
+		}
+
+		grade, parseErr := strconv.Atoi(gradeStr)
+		if parseErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": gin.H{
+					"code":    "INVALID_GRADE",
+					"message": "無效的年級",
+					"status":  400,
+				},
+			})
+			return
+		}
+
+		buffer, err = h.templateService.GenerateRecordsTemplateWithStudents(uint(schoolID), grade, class)
+		filename = "sport-records-template.xlsx"
+	} else {
+		// Generate generic template
+		buffer, err = h.templateService.GenerateRecordsTemplate()
+		filename = "sport-records-template.xlsx"
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
@@ -61,7 +105,7 @@ func (h *ImportHandler) DownloadRecordsTemplate(c *gin.Context) {
 
 	// Set headers for file download
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", "attachment; filename=sport-records-template.xlsx")
+	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer.Bytes())
 }
 

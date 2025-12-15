@@ -130,7 +130,7 @@ func main() {
 
 	// Import routes (Excel batch import)
 	importService := services.NewImportService(db)
-	templateService := services.NewTemplateService()
+	templateService := services.NewTemplateService(db)
 	importHandler := handlers.NewImportHandler(importService, templateService)
 
 	importRoutes := v1.Group("/import")
