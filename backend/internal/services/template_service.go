@@ -31,6 +31,12 @@ func (s *TemplateService) GenerateStudentTemplate() (*bytes.Buffer, error) {
 	f.SetColWidth(sheetName, "E", "E", 10)  // 班級
 	f.SetColWidth(sheetName, "F", "F", 15)  // 生日
 
+	// Set date column format to text to prevent Excel auto-conversion
+	textStyle, _ := f.NewStyle(&excelize.Style{
+		NumFmt: 49, // Text format (@ in Excel)
+	})
+	f.SetColStyle(sheetName, "F", textStyle)
+
 	// Create header style
 	headerStyle, _ := f.NewStyle(&excelize.Style{
 		Font: &excelize.Font{
@@ -150,6 +156,12 @@ func (s *TemplateService) GenerateRecordsTemplate() (*bytes.Buffer, error) {
 	f.SetColWidth(sheetName, "G", "G", 18)  // 仰臥起坐
 	f.SetColWidth(sheetName, "H", "H", 12)  // 心肺耐力
 	f.SetColWidth(sheetName, "I", "I", 15)  // 測驗日期
+
+	// Set date column format to text to prevent Excel auto-conversion
+	textStyle, _ := f.NewStyle(&excelize.Style{
+		NumFmt: 49, // Text format (@ in Excel)
+	})
+	f.SetColStyle(sheetName, "I", textStyle)
 
 	// Create header style
 	headerStyle, _ := f.NewStyle(&excelize.Style{

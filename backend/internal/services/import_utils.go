@@ -17,9 +17,14 @@ var dateFormats = []string{
 	"1/2/2006",     // 3/15/2025
 	"2006年01月02日", // 2025年03月15日
 	"2006年1月2日",   // 2025年3月15日
+	"20060102",     // 20250315 (compact format)
 }
 
+// Excel epoch date (1899-12-30)
+var excelEpoch = time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+
 // ParseDate attempts to parse a date string using multiple formats
+// Supports both text formats and Excel serial numbers
 func ParseDate(value string) (time.Time, error) {
 	if value == "" {
 		return time.Time{}, fmt.Errorf("日期為空")
@@ -28,14 +33,36 @@ func ParseDate(value string) (time.Time, error) {
 	// Trim whitespace
 	value = strings.TrimSpace(value)
 
-	// Try each format
+	// Try to parse as Excel serial number first
+	// Excel serial numbers are typically 5 digits (e.g., 45733 for 2025/03/15)
+	if serial, err := strconv.ParseFloat(value, 64); err == nil {
+		// Check if it's a reasonable Excel date range (1900-01-01 to 2199-12-31)
+		// Excel serial: 1 = 1900-01-01, ~109574 = 2199-12-31
+		if serial >= 1 && serial <= 110000 {
+			// Convert Excel serial to time.Time
+			// Excel epoch is 1899-12-30, but Excel incorrectly treats 1900 as leap year
+			// For dates after 1900-03-01, we need to subtract 1
+			days := int(serial)
+			if days > 60 { // After Excel's incorrect Feb 29, 1900
+				days--
+			}
+			t := excelEpoch.AddDate(0, 0, days)
+
+			// Validate reasonable date range (1950-2100)
+			if t.Year() >= 1950 && t.Year() <= 2100 {
+				return t, nil
+			}
+		}
+	}
+
+	// Try each text format
 	for _, format := range dateFormats {
 		if t, err := time.Parse(format, value); err == nil {
 			return t, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("無法解析日期格式: %s", value)
+	return time.Time{}, fmt.Errorf("無法解析日期格式: %s（支援格式：2025/03/15、2025-03-15）", value)
 }
 
 // ParseFloat attempts to parse a string as float64
