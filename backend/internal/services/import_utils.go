@@ -9,15 +9,26 @@ import (
 
 // Supported date formats for parsing
 var dateFormats = []string{
+	// Year-Month-Day formats (ISO style)
 	"2006/01/02",   // 2025/03/15
 	"2006-01-02",   // 2025-03-15
 	"2006/1/2",     // 2025/3/15
 	"2006-1-2",     // 2025-3-15
+	// Month-Day-Year formats (US style)
 	"01/02/2006",   // 03/15/2025
 	"1/2/2006",     // 3/15/2025
+	"01-02-2006",   // 03-15-2025
+	"1-2-2006",     // 3-15-2025
+	// Short year formats (2-digit year)
+	"01/02/06",     // 03/15/25
+	"1/2/06",       // 3/15/25
+	"01-02-06",     // 03-15-25
+	"1-2-06",       // 3-15-25
+	// Chinese formats
 	"2006年01月02日", // 2025年03月15日
 	"2006年1月2日",   // 2025年3月15日
-	"20060102",     // 20250315 (compact format)
+	// Compact format
+	"20060102",     // 20250315
 }
 
 // Excel epoch date (1899-12-30)
