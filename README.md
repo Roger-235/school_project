@@ -1,154 +1,249 @@
-# ICACP - User Authentication System
+# ICACP - 學童體適能整合平台
 
-## 專案概述
-這是一個完整的用戶認證系統，包含管理員和學校職員角色管理。
+ICACP (Integrated Children's Athletic Capacity Platform) 是一個專為台灣各級學校設計的學童體適能資料管理系統，提供學校、學生、運動測驗記錄的完整管理功能。
 
-### 技術棧
-- **後端**: Go 1.21+ with Gin Framework
-- **前端**: Next.js 14 (Pages Router) with TypeScript
-- **數據庫**: MySQL 8.0+
-- **樣式**: Tailwind CSS
-- **狀態管理**: React Query
+---
 
-## 當前開發環境狀態
+## 功能特色
 
-### ✅ 已完成
-1. ✓ 從 GitHub clone 專案代碼
-2. ✓ 創建專案目錄結構
-3. ✓ 前端環境完全設置完成
-   - Next.js 14 配置
-   - TypeScript 配置
-   - Tailwind CSS 配置
-   - 依賴安裝完成（427 packages）
-   - API client, Auth utilities, Validation schemas
-   - AuthContext 和基本頁面（Login, Dashboard）
+- **學校管理**：支援台灣 22 縣市學校資料管理
+- **學生管理**：學生基本資料與學籍管理
+- **運動記錄**：體適能測驗成績登錄與歷史追蹤
+- **地圖視覺化**：台灣地圖顯示各縣市資料統計
+- **Excel 匯入**：批次匯入學生名單與運動記錄
+- **分析報表**：學生表現趨勢、進步分析、學校排名
 
-### ⚠️ 需要完成
-1. **安裝 Go 1.21+**（後端必需）
-2. **安裝/配置 MySQL 8.0+**（數據庫必需）
+---
 
-## 安裝 Go
+## 技術架構
 
-### Windows 安裝方式：
+| 層級 | 技術 |
+|------|------|
+| 前端 | Next.js 14, React 18, TypeScript, Tailwind CSS |
+| 後端 | Go 1.24+, Gin Framework, GORM |
+| 資料庫 | MySQL 8.0+ |
+| 快取 | Redis 7.x |
+| 地圖 | Leaflet.js, React-Leaflet |
+| 狀態管理 | React Query v5 |
 
-#### 方式 1: 使用安裝程式（推薦）
-1. 訪問：https://go.dev/dl/
-2. 下載 Windows 安裝程式（例如：go1.23.x.windows-amd64.msi）
-3. 執行安裝程式
-4. 重新啟動終端並驗證：`go version`
+---
 
-#### 方式 2: 使用 Chocolatey
+## 快速開始
+
+### 環境需求
+
+- Node.js 18+ 與 npm
+- Go 1.21+
+- MySQL 8.0+
+- Redis 6.0+ (選用)
+- Docker 與 Docker Compose (選用)
+
+### 安裝步驟
+
 ```bash
-choco install golang
-```
+# 1. 複製專案
+git clone https://github.com/wei979/ICACP.git
+cd ICACP
 
-#### 方式 3: 使用 Scoop
-```bash
-scoop install go
-```
+# 2. 啟動資料庫服務 (Docker)
+docker-compose up -d mysql redis
 
-## 安裝 MySQL
+# 3. 設定後端環境變數
+cp backend/.env.example backend/.env
+# 編輯 .env 設定資料庫連線資訊
 
-### Windows 安裝方式：
+# 4. 啟動後端
+cd backend
+go run cmd/server/main.go
 
-#### 方式 1: MySQL Installer（推薦）
-1. 訪問：https://dev.mysql.com/downloads/installer/
-2. 下載 MySQL Installer
-3. 安裝 MySQL Server 8.0+
-4. 記錄 root 密碼
-
-#### 方式 2: Docker（較簡單）
-```bash
-docker run --name mysql-icacp -e MYSQL_ROOT_PASSWORD=yourpassword -e MYSQL_DATABASE=acap_dev -p 3306:3306 -d mysql:8.0
-```
-
-## 啟動專案
-
-### 前端開發伺服器
-```bash
+# 5. 啟動前端 (另開終端機)
 cd frontend
+npm install
 npm run dev
 ```
-訪問：http://localhost:3000
 
-### 後端開發伺服器（安裝 Go 後）
-1. 創建 `backend/.env` 文件：
-```env
-DATABASE_URL="root:yourpassword@tcp(localhost:3306)/acap_dev?charset=utf8mb4&parseTime=True&loc=Local"
-JWT_SECRET="your-32-plus-character-secret-key-here-change-in-production"
-ADMIN_WHITELIST="admin@example.com"
-PORT=8080
-FRONTEND_URL="http://localhost:3000"
-```
+### 存取位址
 
-2. 生成 JWT Secret：
-```bash
-openssl rand -base64 32
-```
+| 服務 | 位址 |
+|------|------|
+| 前端應用 | http://localhost:3000 |
+| 後端 API | http://localhost:8080 |
+| 資料庫管理 | http://localhost:8081 |
 
-3. 初始化 Go 專案：
-```bash
-cd backend
-go mod init github.com/yourusername/acap-backend
-go get github.com/gin-gonic/gin@v1.9.1
-go get gorm.io/gorm@v1.25.5
-go get gorm.io/driver/mysql@v1.5.2
-go get github.com/golang-jwt/jwt/v5@v5.2.0
-go get golang.org/x/crypto@v0.17.0
-go get github.com/gin-contrib/cors@v1.5.0
-go get github.com/joho/godotenv@v1.5.1
-```
-
-4. 執行後端（按照 `specs/001-user-auth/quickstart.md` 實作代碼後）：
-```bash
-go run cmd/server/main.go
-```
+---
 
 ## 專案結構
 
 ```
 ICACP/
-├── backend/               # Go 後端
-│   ├── cmd/
-│   │   └── server/       # 主程序入口
-│   ├── internal/
-│   │   ├── auth/         # 認證邏輯
-│   │   ├── models/       # 數據模型
-│   │   ├── database/     # 數據庫連接
-│   │   └── config/       # 配置管理
-│   └── tests/            # 測試
-├── frontend/             # Next.js 前端
+├── backend/                 # Go 後端 API
+│   ├── cmd/                # 主程式入口
+│   │   └── server/        # API 伺服器
+│   ├── internal/          # 內部模組
+│   │   ├── handlers/      # HTTP 處理器
+│   │   ├── services/      # 業務邏輯
+│   │   └── models/        # 資料模型
+│   └── config/            # 設定檔
+│
+├── frontend/               # Next.js 前端
 │   ├── src/
-│   │   ├── pages/        # 頁面
-│   │   ├── lib/          # 工具函數
-│   │   ├── context/      # React Context
-│   │   ├── components/   # 組件
-│   │   └── styles/       # 樣式
-│   └── public/           # 靜態資源
-├── specs/                # 規格文檔
-│   └── 001-user-auth/    # 用戶認證規格
-└── tests/                # 集成測試
-
+│   │   ├── pages/         # 頁面元件
+│   │   ├── components/    # UI 元件
+│   │   ├── hooks/         # React Query Hooks
+│   │   ├── lib/           # 工具函數
+│   │   └── types/         # TypeScript 型別
+│   └── public/            # 靜態資源
+│
+├── docs/                   # 技術文件
+│   ├── ARCHITECTURE.md    # 系統架構
+│   ├── API.md             # API 文件
+│   ├── DATABASE.md        # 資料庫結構
+│   └── DEPLOYMENT.md      # 部署指南
+│
+├── specs/                  # 功能規格文件
+│   ├── 001-user-auth/
+│   ├── 002-map-visualization/
+│   ├── 003-student-sports-data/
+│   └── ...
+│
+└── docker-compose.yml      # Docker 服務設定
 ```
 
-## 下一步
+---
 
-1. **安裝 Go 和 MySQL**
-2. **實作後端代碼**：按照 `specs/001-user-auth/quickstart.md` 的步驟實作
-3. **測試 API**：使用 Postman 或 curl 測試後端 API
-4. **前後端聯調**：確保前端可以成功呼叫後端 API
+## API 端點概覽
 
-## 參考文檔
+| 資源 | 端點 | 說明 |
+|------|------|------|
+| 學校 | GET /api/v1/schools | 學校列表與管理 |
+| 學生 | GET /api/v1/students | 學生搜尋與管理 |
+| 運動類型 | GET /api/v1/sport-types | 運動類型定義 |
+| 運動記錄 | GET /api/v1/sport-records | 測驗記錄管理 |
+| 縣市統計 | GET /api/v1/counties/statistics | 各縣市資料統計 |
+| Excel 匯入 | POST /api/v1/import/* | 批次資料匯入 |
 
-- 詳細實作步驟：`specs/001-user-auth/quickstart.md`
-- 數據模型：`specs/001-user-auth/data-model.md`
-- API 規格：`specs/001-user-auth/spec.md`
-- 開發計劃：`specs/001-user-auth/plan.md`
+詳細 API 文件請參考 [docs/API.md](docs/API.md)。
 
-## 環境檢查
+---
 
-當前環境狀態：
-- ✅ Node.js: v24.4.1
-- ✅ npm: 11.4.2
-- ❌ Go: 未安裝（需要 1.21+）
-- ❌ MySQL: 未確認
+## 文件索引
+
+| 文件 | 說明 |
+|------|------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系統架構與技術決策 |
+| [API.md](docs/API.md) | 完整 API 端點文件 |
+| [DATABASE.md](docs/DATABASE.md) | 資料庫結構與關聯 |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署指南與維運說明 |
+| [CLAUDE.md](CLAUDE.md) | 開發指引與技術摘要 |
+
+---
+
+## 開發指令
+
+### 後端
+
+```bash
+cd backend
+
+# 啟動開發伺服器
+go run cmd/server/main.go
+
+# 編譯正式版本
+go build -o server ./cmd/server/main.go
+
+# 執行測試
+go test ./...
+```
+
+### 前端
+
+```bash
+cd frontend
+
+# 啟動開發伺服器
+npm run dev
+
+# 編譯正式版本
+npm run build
+
+# 執行 lint 檢查
+npm run lint
+
+# 型別檢查
+npx tsc --noEmit
+```
+
+### Docker
+
+```bash
+# 啟動所有服務
+docker-compose up -d
+
+# 查看服務狀態
+docker-compose ps
+
+# 停止所有服務
+docker-compose down
+```
+
+---
+
+## 部署資訊
+
+### 目前正式環境
+
+| 項目 | 位址 |
+|------|------|
+| 前端 (Vercel) | https://icacp-srvy.vercel.app |
+| 後端 API (EC2) | http://43.213.29.25:8080 |
+
+### 部署流程
+
+**後端 (EC2):**
+```bash
+ssh -i key.pem ec2-user@43.213.29.25
+cd ~/ICACP/backend
+git pull
+sudo systemctl stop sport-backend
+go build -o server ./cmd/server/main.go
+cp server sport-backend
+sudo systemctl start sport-backend
+```
+
+**前端 (Vercel):**
+- 推送至 `main` 分支自動觸發部署
+
+詳細部署說明請參考 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+
+---
+
+## 已完成功能
+
+- [x] 使用者認證系統（前端）
+- [x] 學校資料管理 (CRUD)
+- [x] 學生資料管理 (CRUD)
+- [x] 運動記錄管理 (CRUD + 稽核軌跡)
+- [x] 台灣地圖視覺化
+- [x] 縣市統計與 Redis 快取
+- [x] Excel 批次匯入（學生、運動記錄）
+- [x] 學生表現分析與趨勢圖表
+- [x] 全域導覽與麵包屑
+
+## 待完成功能
+
+- [ ] 後端 JWT 認證中介軟體
+- [ ] 角色權限管理（管理員/學校職員）
+- [ ] 資料匯出功能
+
+---
+
+## 授權
+
+本專案為私有專案，未經授權不得使用或散布。
+
+---
+
+## 聯絡資訊
+
+- GitHub: https://github.com/wei979/ICACP
+- Issues: https://github.com/wei979/ICACP/issues
