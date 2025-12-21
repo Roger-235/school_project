@@ -196,78 +196,158 @@ module.exports = {
 
 ---
 
-## 5. Docker 部署
+## 5. Docker 全端部署
 
-### 5.1 Docker Compose 配置
+本專案支援完整的 Docker 容器化部署，包含後端、前端、資料庫和快取服務。
 
-```yaml
-# docker-compose.yml
-version: '3.8'
+### 5.1 前置需求
 
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: acap-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: password123
-      MYSQL_DATABASE: acap_dev
-      MYSQL_USER: acap
-      MYSQL_PASSWORD: acap_password
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+僅需安裝 Docker Desktop（包含 Docker Compose）：
+- Windows/Mac: https://www.docker.com/products/docker-desktop
+- Linux: `sudo apt install docker.io docker-compose`
 
-  redis:
-    image: redis:7-alpine
-    container_name: acap-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  adminer:
-    image: adminer
-    container_name: acap-adminer
-    ports:
-      - "8081:8080"
-    depends_on:
-      - mysql
-
-volumes:
-  mysql_data:
-  redis_data:
-```
-
-### 5.2 Docker 常用指令
+### 5.2 一鍵部署（完整服務）
 
 ```bash
-# 啟動所有服務
+# 1. 複製專案
+git clone https://github.com/wei979/ICACP.git
+cd ICACP
+
+# 2. 設定環境變數（選用，可使用預設值）
+cp .env.example .env
+# 編輯 .env 修改密碼等設定
+
+# 3. 一鍵啟動所有服務
+docker-compose up -d --build
+
+# 4. 查看服務狀態
+docker-compose ps
+```
+
+啟動後可存取：
+
+| 服務 | 位址 | 說明 |
+|------|------|------|
+| 前端 | http://localhost:3000 | Next.js 應用 |
+| 後端 API | http://localhost:8080 | Go API 伺服器 |
+| 健康檢查 | http://localhost:8080/health | API 狀態確認 |
+| Adminer | http://localhost:8081 | 資料庫管理（需額外啟用） |
+
+### 5.3 服務架構
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Docker Network                        │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │  frontend   │───▶│   backend   │───▶│    mysql    │  │
+│  │   :3000     │    │    :8080    │    │    :3306    │  │
+│  └─────────────┘    └──────┬──────┘    └─────────────┘  │
+│                            │                             │
+│                            ▼                             │
+│                     ┌─────────────┐                      │
+│                     │    redis    │                      │
+│                     │    :6379    │                      │
+│                     └─────────────┘                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 5.4 開發模式（僅資料庫）
+
+如果想在本地開發程式碼，只啟動資料庫：
+
+```bash
+# 只啟動 MySQL 和 Redis
+docker-compose up -d mysql redis
+
+# 本地執行後端
+cd backend && go run cmd/server/main.go
+
+# 本地執行前端
+cd frontend && npm run dev
+```
+
+### 5.5 環境變數設定
+
+可透過 `.env` 檔案自訂設定：
+
+```bash
+# 資料庫
+MYSQL_ROOT_PASSWORD=your_secure_password
+MYSQL_DATABASE=acap_dev
+
+# 後端
+JWT_SECRET=your-32-character-secret-key
+BACKEND_PORT=8080
+
+# 前端
+FRONTEND_PORT=3000
+```
+
+### 5.6 Docker 常用指令
+
+```bash
+# 啟動所有服務（背景執行）
 docker-compose up -d
+
+# 啟動並重建映像檔（程式碼更新後）
+docker-compose up -d --build
 
 # 查看服務狀態
 docker-compose ps
 
-# 查看日誌
-docker-compose logs -f mysql
-docker-compose logs -f redis
+# 查看即時日誌
+docker-compose logs -f
+
+# 查看特定服務日誌
+docker-compose logs -f backend
+docker-compose logs -f frontend
 
 # 停止所有服務
 docker-compose down
 
-# 停止並刪除資料
+# 停止並刪除所有資料（完全重置）
 docker-compose down -v
+
+# 重啟單一服務
+docker-compose restart backend
+
+# 進入容器除錯
+docker exec -it acap-backend sh
+docker exec -it acap-mysql mysql -u root -p
+
+# 啟用 Adminer（資料庫管理工具）
+docker-compose --profile tools up -d adminer
 ```
+
+### 5.7 Dockerfile 說明
+
+**後端 (backend/Dockerfile):**
+- 使用多階段建構 (Multi-stage build)
+- 第一階段：使用 golang:1.23-alpine 編譯
+- 第二階段：使用 alpine:3.19 執行（映像檔約 20MB）
+- 使用非 root 使用者執行，增強安全性
+
+**前端 (frontend/Dockerfile):**
+- 使用多階段建構
+- 第一階段：安裝相依套件
+- 第二階段：建構 Next.js 專案
+- 第三階段：使用 standalone 模式執行（映像檔約 150MB）
+
+### 5.8 正式環境注意事項
+
+1. **修改預設密碼：**
+   ```bash
+   MYSQL_ROOT_PASSWORD=<強密碼>
+   JWT_SECRET=<至少32字元的隨機字串>
+   ```
+
+2. **使用 HTTPS：**
+   - 建議在前方加入 Nginx 或 Traefik 作為反向代理
+   - 設定 SSL 憑證
+
+3. **資料持久化：**
+   - 確保 `mysql_data` 和 `redis_data` 磁碟區正確掛載
+   - 定期備份資料庫
 
 ---
 
