@@ -103,6 +103,39 @@ export default function Dashboard() {
                 </div>
               </div>
             </Link>
+            {/* Demo Page - 新增的按鈕 */}
+          <Link
+            href="/demo"
+            className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-center">
+              {/* 圖示區塊 (紅色) */}
+              <div className="flex-shrink-0 p-3 bg-red-100 rounded-lg">
+                <svg
+                  className="w-8 h-8 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z" /* 這是閃電圖示 */
+                  />
+                </svg>
+              </div>
+              {/* 文字區塊 */}
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  測試新頁面
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  點擊這裡前往 demo 頁面
+                </p>
+              </div>
+            </div>
+          </Link>
           </div>
     </MainLayout>
   )

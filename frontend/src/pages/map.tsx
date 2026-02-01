@@ -17,6 +17,8 @@ import { useMapState } from '../hooks/useMapState';
 import { useSchoolsForMap, getSchoolsFromResponse } from '../hooks/useSchoolsForMap';
 import CountyPopup from '../components/map/CountyPopup';
 import type { SchoolMapData } from '../types/schoolMap';
+import { SchoolChampion } from '@/types/statistics';
+import { useSchoolChampions } from '../hooks/useStatistics';
 
 // 動態載入地圖元件（避免 SSR 問題）
 const MapView = dynamic(() => import('../components/map/MapView'), {
@@ -47,6 +49,14 @@ const SchoolDetailPanel = dynamic(() => import('../components/map/SchoolDetailPa
   ssr: false,
 });
 
+const ChampionMarkerLayer = dynamic(() => import('../components/map/ChampionMarkerLayer'), {
+  ssr: false,
+});
+
+const ChampionsList = dynamic(() => import('../components/map/ChampionsList'), {
+  ssr: false,
+});
+
 export default function MapPage() {
   const [isMobile, setIsMobile] = useState(false);
   const { data, isLoading, error, refetch } = useAllCountyStats();
@@ -56,6 +66,20 @@ export default function MapPage() {
   const { data: schoolsData, isLoading: schoolsLoading } = useSchoolsForMap();
   const [selectedSchool, setSelectedSchool] = useState<SchoolMapData | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // 冠軍學校相關狀態
+  const { data: champions, isLoading: championsLoading } = useSchoolChampions();
+  const [showChampions, setShowChampions] = useState(true);
+  const [mapInstance, setMapInstance] = useState<any>(null);
+
+  // 點擊冠軍時飛到該位置
+  const handleChampionClick = useCallback((champion: SchoolChampion) => {
+    if (mapInstance) {
+      mapInstance.flyTo([champion.latitude, champion.longitude], 15, {
+        duration: 1.5,
+      });
+    }
+  }, [mapInstance]);
 
   // 處理縣市點擊事件
   const handleCountyClick = useCallback((countyName: string, position: { x: number; y: number }) => {
@@ -133,6 +157,15 @@ export default function MapPage() {
       </Head>
 
       <div className="relative h-[calc(100vh-140px)]">
+        {/* 🎯 在這裡加入冠軍榜單（第一個元素） */}
+        {!championsLoading && champions && champions.length > 0 && (
+          <div className="absolute left-4 top-4 bottom-4 w-80 z-[999] overflow-hidden">
+            <ChampionsList 
+              champions={champions}
+              onChampionClick={handleChampionClick}
+            />
+          </div>
+        )}
         {/* 載入狀態 */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
@@ -180,24 +213,48 @@ export default function MapPage() {
         {!isLoading && !error && data && (
           <>
             <MapView>
-              {(map) => (
-                <>
-                  <CountyLayer
-                    map={map}
-                    countyStats={(data as any).data.counties}
-                    onCountyClick={handleCountyClick}
-                  />
-                  {/* School markers (Feature: 006-school-map-markers) */}
-                  {!schoolsLoading && schoolsData && (
-                    <SchoolMarkerLayer
+              {(map) => {
+                // 保存 map 實例以供其他地方使用
+                if (!mapInstance) {
+                  setMapInstance(map);
+                }
+                
+                return (
+                  <>
+                    <CountyLayer
                       map={map}
-                      schools={getSchoolsFromResponse(schoolsData)}
-                      onSchoolClick={handleSchoolClick}
+                      countyStats={(data as any).data.counties}
+                      onCountyClick={handleCountyClick}
                     />
-                  )}
-                  <MapControls map={map} />
-                </>
-              )}
+                    
+                    {/* School markers */}
+                    {!schoolsLoading && schoolsData && (
+                      <SchoolMarkerLayer
+                        map={map}
+                        schools={getSchoolsFromResponse(schoolsData)}
+                        onSchoolClick={handleSchoolClick}
+                      />
+                    )}
+                    
+                    {/* 冠軍學校標記 */}
+                    {showChampions && !championsLoading && champions && champions.length > 0 && (
+                      <ChampionMarkerLayer 
+                        map={map}
+                        champions={champions}
+                        onSchoolClick={(schoolId) => {
+                          // 找到對應的學校並顯示詳情
+                          const school = getSchoolsFromResponse(schoolsData).find(s => s.id === schoolId);
+                          if (school) {
+                            handleSchoolClick(school);
+                          }
+                        }}
+                      />
+                    )}
+                    
+                    <MapControls map={map} />
+                  </>
+                );
+              }}
             </MapView>
 
             {/* 縣市統計彈窗 */}
@@ -239,6 +296,25 @@ export default function MapPage() {
                 </div>
                 <span className="text-sm text-gray-700">學校位置</span>
               </div>
+              {/* 新增冠軍標記說明 */}
+              <div className="flex items-center gap-2">
+                <div className="text-2xl">🏆</div>
+                <span className="text-sm text-gray-700">冠軍學校</span>
+              </div>
+            </div>
+            
+            {/* 切換按鈕 */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => setShowChampions(!showChampions)}
+                className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showChampions
+                    ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showChampions ? '隱藏冠軍標記' : '顯示冠軍標記'}
+              </button>
             </div>
             {data && (
               <div className="mt-3 pt-3 border-t border-gray-200">

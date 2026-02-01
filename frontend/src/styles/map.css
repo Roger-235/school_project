@@ -647,3 +647,30 @@
   background: #f3f4f6;
   border-color: #9ca3af;
 }
+
+/* 冠軍標記動畫 */
+.champion-marker-wrapper {
+  animation: championPulse 2s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+@keyframes championPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.9));
+  }
+}
+
+/* 冠軍彈窗樣式 */
+.champion-popup .leaflet-popup-content-wrapper {
+  border: 2px solid #FFA500;
+  border-radius: 8px;
+}
+
+.champion-popup .leaflet-popup-tip {
+  border-top-color: #FFA500 !important;
+}

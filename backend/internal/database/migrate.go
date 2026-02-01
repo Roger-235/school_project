@@ -19,6 +19,7 @@ func Migrate(db *gorm.DB) error {
 		&models.Student{},
 		&models.SportRecord{},
 		&models.SportRecordAudit{},
+		&models.NationalAverage{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)

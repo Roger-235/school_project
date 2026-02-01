@@ -128,6 +128,8 @@ func main() {
 		sportRecordRoutes.DELETE("/:id", sportRecordHandler.Delete)
 	}
 
+	// ★★★ 已移除 Analysis 相關程式碼 ★★★
+
 	// Import routes (Excel batch import)
 	importService := services.NewImportService(db)
 	templateService := services.NewTemplateService(db)
@@ -152,6 +154,22 @@ func main() {
 		// Cancel preview
 		importRoutes.DELETE("/preview/:preview_id", importHandler.CancelPreview)
 	}
+
+	// ========== 🎯 在這裡加入統計路由 ==========
+	// Statistics routes (全國平均比較)
+	statisticsService := services.NewStatisticsService(db, config.GetRedisClient())
+	statisticsHandler := handlers.NewStatisticsHandler(statisticsService)
+
+	statisticsRoutes := v1.Group("/statistics")
+	// TODO: Add auth middleware when available from 001-user-auth
+	// statisticsRoutes.Use(authMiddleware())
+	{
+		statisticsRoutes.GET("/student-comparison/:studentId", statisticsHandler.GetStudentComparison)
+		statisticsRoutes.GET("/national-averages", statisticsHandler.GetNationalAverages)
+		statisticsRoutes.POST("/national-averages/calculate", statisticsHandler.CalculateNationalAverages)
+		statisticsRoutes.GET("/school-champions", statisticsHandler.GetSchoolChampions)
+	}
+	// ========== 統計路由結束 ==========
 
 	// Start server
 	port := os.Getenv("PORT")
