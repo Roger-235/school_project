@@ -64,12 +64,35 @@ export default function ComparisonTable({ comparisons }: Props) {
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                <div className="font-medium text-gray-900">
-                  {c.student_value.toFixed(1)} {c.unit}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {c.student_test_date}
-                </div>
+                {c.student_records && c.student_records.length > 0 ? (
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {c.student_records[0].value.toFixed(1)} {c.unit}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {c.student_records[0].test_date}
+                    </div>
+                    {c.student_records.length > 1 && (
+                      <div className="mt-1 pt-1 border-t border-gray-200">
+                        <div className="font-medium text-blue-600">
+                          {c.student_records[1].value.toFixed(1)} {c.unit}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {c.student_records[1].test_date} (前次)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {c.student_value.toFixed(1)} {c.unit}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {c.student_test_date}
+                    </div>
+                  </div>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
                 {c.national_avg.toFixed(1)} {c.unit}

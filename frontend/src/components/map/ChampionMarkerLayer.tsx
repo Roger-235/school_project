@@ -9,8 +9,12 @@ declare module 'leaflet' {
     showCoverageOnHover?: boolean;
     zoomToBoundsOnClick?: boolean;
     spiderfyOnMaxZoom?: boolean;
-    maxClusterRadius?: number;
-    iconCreateFunction?: (cluster: any) => L.DivIcon;
+    maxClusterRadius?: number | ((zoom: number) => number);
+    iconCreateFunction?: (cluster: MarkerCluster) => L.DivIcon | L.Icon<L.IconOptions>;
+  }
+
+  interface MarkerCluster extends L.Marker {
+    getChildCount(): number;
   }
 
   namespace MarkerClusterGroup {

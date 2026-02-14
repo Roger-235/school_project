@@ -33,6 +33,7 @@ export interface SchoolDetailPanelProps {
   schoolId: number | null;
   isOpen: boolean;
   onClose: () => void;
+  sportTypeId?: number | null; // 可選：用於從排名榜點擊時篩選和排序
 }
 
 // Student info displayed in school detail panel

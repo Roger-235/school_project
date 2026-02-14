@@ -121,6 +121,7 @@ func main() {
 		sportRecordRoutes.GET("/trend", sportRecordHandler.GetTrend)
 		sportRecordRoutes.GET("/progress", sportRecordHandler.GetProgress)
 		sportRecordRoutes.GET("/ranking", sportRecordHandler.GetSchoolRanking)
+		sportRecordRoutes.GET("/bulk-scores", sportRecordHandler.GetBulkScores)
 		sportRecordRoutes.GET("/:id", sportRecordHandler.Get)
 		sportRecordRoutes.GET("/:id/history", sportRecordHandler.GetHistory)
 		sportRecordRoutes.POST("", sportRecordHandler.Create)
@@ -165,9 +166,12 @@ func main() {
 	// statisticsRoutes.Use(authMiddleware())
 	{
 		statisticsRoutes.GET("/student-comparison/:studentId", statisticsHandler.GetStudentComparison)
+		statisticsRoutes.GET("/grade-comparison/:studentId", statisticsHandler.GetGradeComparison)
 		statisticsRoutes.GET("/national-averages", statisticsHandler.GetNationalAverages)
 		statisticsRoutes.POST("/national-averages/calculate", statisticsHandler.CalculateNationalAverages)
 		statisticsRoutes.GET("/school-champions", statisticsHandler.GetSchoolChampions)
+		statisticsRoutes.GET("/top-schools", statisticsHandler.GetAllTopSchools)
+		statisticsRoutes.GET("/top-schools/:sportTypeId", statisticsHandler.GetTopSchoolsBySport)
 	}
 	// ========== 統計路由結束 ==========
 

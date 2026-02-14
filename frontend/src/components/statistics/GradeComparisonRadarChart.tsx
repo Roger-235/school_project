@@ -1,16 +1,16 @@
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Comparison } from '@/types/statistics';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { GradeComparison } from '@/types/statistics';
 
 interface Props {
-  comparisons: Comparison[];
+  comparisons: GradeComparison[];
   height?: number;
 }
 
-export default function ComparisonRadarChart({ comparisons, height = 350 }: Props) {
-  // 轉換數據格式 - 使用百分位排名 (0-100)
+export default function GradeComparisonRadarChart({ comparisons, height = 350 }: Props) {
+  // 將排名轉換為百分位 (排名越前面，百分位越高)
   const chartData = comparisons.map(c => ({
     subject: c.sport_type_name,
-    個人表現: c.percentile_rank,
+    個人表現: Math.round(((c.total_students - c.grade_rank + 1) / c.total_students) * 100),
     fullMark: 100,
   }));
 

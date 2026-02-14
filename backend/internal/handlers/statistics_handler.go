@@ -49,6 +49,35 @@ func (h *StatisticsHandler) GetStudentComparison(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+// GetGradeComparison 取得學生同年級比較
+// GET /api/v1/statistics/grade-comparison/:studentId
+func (h *StatisticsHandler) GetGradeComparison(c *gin.Context) {
+	studentIDStr := c.Param("studentId")
+	studentID, err := strconv.ParseUint(studentIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_STUDENT_ID",
+				"message": "學生 ID 格式錯誤",
+			},
+		})
+		return
+	}
+
+	result, err := h.service.GetGradeComparison(c.Request.Context(), uint(studentID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "QUERY_ERROR",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": result})
+}
+
 // CalculateNationalAverages 計算全國平均值
 // POST /api/v1/statistics/national-averages/calculate
 func (h *StatisticsHandler) CalculateNationalAverages(c *gin.Context) {
@@ -118,6 +147,75 @@ func (h *StatisticsHandler) GetSchoolChampions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
 			"champions": champions,
+		},
+	})
+}
+
+// GetTopSchoolsBySport 取得指定運動項目的前N名學校
+// GET /api/v1/statistics/top-schools/:sportTypeId?limit=10
+func (h *StatisticsHandler) GetTopSchoolsBySport(c *gin.Context) {
+	sportTypeIDStr := c.Param("sportTypeId")
+	sportTypeID, err := strconv.ParseUint(sportTypeIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_SPORT_TYPE_ID",
+				"message": "運動類型 ID 格式錯誤",
+			},
+		})
+		return
+	}
+
+	limit := 10 // 默認前10名
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	rankings, err := h.service.GetTopSchoolsBySport(c.Request.Context(), uint(sportTypeID), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "QUERY_ERROR",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"rankings": rankings,
+			"count":    len(rankings),
+		},
+	})
+}
+
+// GetAllTopSchools 取得所有運動項目的前N名學校
+// GET /api/v1/statistics/top-schools?limit=10
+func (h *StatisticsHandler) GetAllTopSchools(c *gin.Context) {
+	limit := 10 // 默認前10名
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	rankings, err := h.service.GetAllTopSchools(c.Request.Context(), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "QUERY_ERROR",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"rankings": rankings,
 		},
 	})
 }

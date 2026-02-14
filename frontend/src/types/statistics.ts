@@ -16,13 +16,19 @@ export interface StudentComparison {
   };
 }
 
+export interface StudentRecord {
+  value: number;
+  test_date: string;
+}
+
 export interface Comparison {
   sport_type_id: number;
   sport_type_name: string;
   category: string;
   unit: string;
-  student_value: number;
-  student_test_date: string;
+  student_records: StudentRecord[];  // 最多2筆記錄
+  student_value: number;              // 保留向後兼容：最新記錄
+  student_test_date: string;          // 保留向後兼容：最新記錄日期
   national_avg: number;
   difference: number;
   difference_percent: number;
@@ -35,6 +41,29 @@ export interface Comparison {
     percentile_75: number;
     percentile_90: number;
   };
+}
+
+export interface GradeComparison {
+  sport_type_id: number;
+  sport_type_name: string;
+  category: string;
+  unit: string;
+  student_value: number;
+  grade_avg: number;
+  grade_rank: number;
+  total_students: number;
+  grade_best: number;
+}
+
+export interface GradeComparisonResult {
+  student: {
+    id: number;
+    name: string;
+    grade: number;
+    gender: string;
+    school_name: string;
+  };
+  comparisons: GradeComparison[];
 }
 
 export interface NationalAverage {
@@ -58,6 +87,21 @@ export interface NationalAverage {
 }
 
 export interface SchoolChampion {
+  sport_type_id: number;
+  sport_type_name: string;
+  category: string;
+  unit: string;
+  school_id: number;
+  school_name: string;
+  county_name: string;
+  latitude: number;
+  longitude: number;
+  average_value: number;
+  student_count: number;
+}
+
+export interface SportTypeSchoolRanking {
+  rank: number;
   sport_type_id: number;
   sport_type_name: string;
   category: string;

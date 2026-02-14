@@ -117,7 +117,7 @@ export default function SchoolRankingChart({
               width={70}
             />
             <Tooltip
-              formatter={(value: number) => [`${value} ${data.unit}`, '成績']}
+              formatter={(value: number | undefined) => [`${value || 0} ${data.unit}`, '成績']}
               labelFormatter={(label) => `學生: ${label}`}
               contentStyle={{
                 backgroundColor: 'white',

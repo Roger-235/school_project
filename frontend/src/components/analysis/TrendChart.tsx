@@ -105,7 +105,7 @@ export default function TrendChart({
               tickFormatter={(value) => `${value}`}
             />
             <Tooltip
-              formatter={(value: number) => [`${value} ${unit}`, sportTypeName]}
+              formatter={(value: number | undefined) => [`${value || 0} ${unit}`, sportTypeName]}
               labelFormatter={(label) => `日期: ${label}`}
               contentStyle={{
                 backgroundColor: 'white',

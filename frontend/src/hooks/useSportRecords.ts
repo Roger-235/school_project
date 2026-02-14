@@ -148,3 +148,42 @@ export function useDeleteSportRecord() {
     },
   })
 }
+
+// Student score result from bulk API
+export interface StudentScore {
+  student_id: number
+  student_name: string
+  grade: number
+  class: string | null
+  gender: string
+  value: number | null
+  test_date: string | null
+  record_id: number | null
+}
+
+/**
+ * Hook to fetch scores for multiple students in a specific sport type
+ */
+export function useBulkStudentScores(studentIds: number[], sportTypeId: number | null) {
+  return useQuery({
+    queryKey: ['bulkScores', studentIds, sportTypeId],
+    queryFn: async () => {
+      if (!sportTypeId || studentIds.length === 0) {
+        return []
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/sport-records/bulk-scores?student_ids=${studentIds.join(',')}&sport_type_id=${sportTypeId}`
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch bulk scores')
+      }
+
+      const data = await response.json()
+      return data.data.scores as StudentScore[]
+    },
+    enabled: !!sportTypeId && studentIds.length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+}

@@ -78,6 +78,87 @@ func (s *SportRecordService) ListBySportType(studentID, sportTypeID uint) ([]mod
 	return records, nil
 }
 
+// StudentScoreResult represents a student with their score in a specific sport type
+type StudentScoreResult struct {
+	StudentID   uint    `json:"student_id"`
+	StudentName string  `json:"student_name"`
+	Grade       int     `json:"grade"`
+	Class       *string `json:"class"`
+	Gender      string  `json:"gender"`
+	Value       *float64 `json:"value"` // nil if no record
+	TestDate    *string `json:"test_date"`
+	RecordID    *uint   `json:"record_id"`
+}
+
+// GetStudentScoresBySportType retrieves scores for multiple students in a specific sport type
+// Returns the latest record for each student, including students with no records
+func (s *SportRecordService) GetStudentScoresBySportType(studentIDs []uint, sportTypeID uint) ([]StudentScoreResult, error) {
+	if len(studentIDs) == 0 {
+		return []StudentScoreResult{}, nil
+	}
+
+	// First, get all students info
+	var students []models.Student
+	err := s.db.Where("id IN ?", studentIDs).Find(&students).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch students: %w", err)
+	}
+
+	// Create a map of student ID to student info
+	studentMap := make(map[uint]models.Student)
+	for _, student := range students {
+		studentMap[student.ID] = student
+	}
+
+	// Get the latest record for each student in this sport type
+	var records []models.SportRecord
+	err = s.db.Where("student_id IN ? AND sport_type_id = ?", studentIDs, sportTypeID).
+		Order("test_date DESC, created_at DESC").
+		Find(&records).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch records: %w", err)
+	}
+
+	// Create a map to store the latest record for each student
+	latestRecordMap := make(map[uint]models.SportRecord)
+	for _, record := range records {
+		if _, exists := latestRecordMap[record.StudentID]; !exists {
+			latestRecordMap[record.StudentID] = record
+		}
+	}
+
+	// Build results including students with no records
+	results := make([]StudentScoreResult, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		student, studentExists := studentMap[studentID]
+		if !studentExists {
+			continue // Skip if student not found
+		}
+
+		// Create a copy of class for pointer
+		classValue := student.Class
+		result := StudentScoreResult{
+			StudentID:   student.ID,
+			StudentName: student.Name,
+			Grade:       student.Grade,
+			Class:       &classValue,
+			Gender:      student.Gender,
+		}
+
+		// Add record data if exists
+		if record, hasRecord := latestRecordMap[studentID]; hasRecord {
+			result.Value = &record.Value
+			result.RecordID = &record.ID
+			testDate := record.TestDate.Format("2006-01-02")
+			result.TestDate = &testDate
+		}
+
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
 // GetByID retrieves a sport record by ID
 func (s *SportRecordService) GetByID(id uint) (*models.SportRecord, error) {
 	var record models.SportRecord

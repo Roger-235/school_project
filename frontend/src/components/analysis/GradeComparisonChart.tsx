@@ -42,9 +42,9 @@ export default function GradeComparisonChart({ data, isLoading }: Props) {
           <YAxis />
           
           {/* 滑鼠移上去的提示框 */}
-          <Tooltip 
+          <Tooltip
             cursor={{ fill: '#f3f4f6' }}
-            formatter={(value: number) => [value, '分數']} 
+            formatter={(value: number | undefined) => [value || 0, '分數']}
           />
           
           {/* 圖例 */}

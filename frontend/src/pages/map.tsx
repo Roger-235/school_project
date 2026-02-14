@@ -66,20 +66,29 @@ export default function MapPage() {
   const { data: schoolsData, isLoading: schoolsLoading } = useSchoolsForMap();
   const [selectedSchool, setSelectedSchool] = useState<SchoolMapData | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedSportTypeId, setSelectedSportTypeId] = useState<number | null>(null);
 
   // 冠軍學校相關狀態
   const { data: champions, isLoading: championsLoading } = useSchoolChampions();
   const [showChampions, setShowChampions] = useState(true);
   const [mapInstance, setMapInstance] = useState<any>(null);
 
-  // 點擊冠軍時飛到該位置
+  // 點擊冠軍時飛到該位置並打開學校面板
   const handleChampionClick = useCallback((champion: SchoolChampion) => {
     if (mapInstance) {
       mapInstance.flyTo([champion.latitude, champion.longitude], 15, {
         duration: 1.5,
       });
     }
-  }, [mapInstance]);
+    // 找到對應的學校並顯示詳情，同時傳遞運動項目 ID
+    const school = getSchoolsFromResponse(schoolsData).find(s => s.id === champion.school_id);
+    if (school) {
+      setSelectedSchool(school);
+      setSelectedSportTypeId(champion.sport_type_id);
+      setIsPanelOpen(true);
+      clearSelection();
+    }
+  }, [mapInstance, schoolsData, clearSelection]);
 
   // 處理縣市點擊事件
   const handleCountyClick = useCallback((countyName: string, position: { x: number; y: number }) => {
@@ -89,6 +98,7 @@ export default function MapPage() {
   // 處理學校標記點擊事件
   const handleSchoolClick = useCallback((school: SchoolMapData) => {
     setSelectedSchool(school);
+    setSelectedSportTypeId(null); // 清除運動項目篩選
     setIsPanelOpen(true);
     // Close county popup when clicking a school
     clearSelection();
@@ -98,7 +108,10 @@ export default function MapPage() {
   const handleClosePanel = useCallback(() => {
     setIsPanelOpen(false);
     // Delay clearing selected school to allow animation
-    setTimeout(() => setSelectedSchool(null), 300);
+    setTimeout(() => {
+      setSelectedSchool(null);
+      setSelectedSportTypeId(null);
+    }, 300);
   }, []);
 
   // 檢查是否為桌面裝置
@@ -159,16 +172,17 @@ export default function MapPage() {
       <div className="relative h-[calc(100vh-140px)]">
         {/* 🎯 在這裡加入冠軍榜單（第一個元素） */}
         {!championsLoading && champions && champions.length > 0 && (
-          <div className="absolute left-4 top-4 bottom-4 w-80 z-[999] overflow-hidden">
-            <ChampionsList 
+          <div className="absolute left-4 top-4 bottom-4 z-[999] flex items-stretch">
+            <ChampionsList
               champions={champions}
               onChampionClick={handleChampionClick}
             />
           </div>
         )}
-        {/* 載入狀態 */}
+
+        {/* 載入狀態覆蓋層（不阻擋地圖渲染） */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 z-10 pointer-events-none">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
               <p className="text-gray-700 font-medium">載入縣市統計資料中...</p>
@@ -176,9 +190,9 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* 錯誤狀態 */}
+        {/* 錯誤狀態覆蓋層 */}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10">
             <div className="text-center">
               <svg
                 className="mx-auto h-12 w-12 text-red-500 mb-4"
@@ -209,71 +223,70 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* 地圖視圖 */}
-        {!isLoading && !error && data && (
-          <>
-            <MapView>
-              {(map) => {
-                // 保存 map 實例以供其他地方使用
-                if (!mapInstance) {
-                  setMapInstance(map);
-                }
-                
-                return (
-                  <>
-                    <CountyLayer
-                      map={map}
-                      countyStats={(data as any).data.counties}
-                      onCountyClick={handleCountyClick}
-                    />
-                    
-                    {/* School markers */}
-                    {!schoolsLoading && schoolsData && (
-                      <SchoolMarkerLayer
-                        map={map}
-                        schools={getSchoolsFromResponse(schoolsData)}
-                        onSchoolClick={handleSchoolClick}
-                      />
-                    )}
-                    
-                    {/* 冠軍學校標記 */}
-                    {showChampions && !championsLoading && champions && champions.length > 0 && (
-                      <ChampionMarkerLayer 
-                        map={map}
-                        champions={champions}
-                        onSchoolClick={(schoolId) => {
-                          // 找到對應的學校並顯示詳情
-                          const school = getSchoolsFromResponse(schoolsData).find(s => s.id === schoolId);
-                          if (school) {
-                            handleSchoolClick(school);
-                          }
-                        }}
-                      />
-                    )}
-                    
-                    <MapControls map={map} />
-                  </>
-                );
-              }}
-            </MapView>
+        {/* 地圖視圖（立即渲染，不等待 API 資料） */}
+        <MapView>
+          {(map) => {
+            // 保存 map 實例以供其他地方使用
+            if (!mapInstance) {
+              setMapInstance(map);
+            }
 
-            {/* 縣市統計彈窗 */}
-            {selectedCounty && (
-              <CountyPopup
-                countyName={selectedCounty.name}
-                position={selectedCounty.position}
-                onClose={clearSelection}
-              />
-            )}
+            return (
+              <>
+                {/* 縣市圖層 - 資料載入後才渲染 */}
+                {data && (
+                  <CountyLayer
+                    map={map}
+                    countyStats={(data as any).data.counties}
+                    onCountyClick={handleCountyClick}
+                  />
+                )}
 
-            {/* 學校詳情側邊面板 (Feature: 006-school-map-markers) */}
-            <SchoolDetailPanel
-              schoolId={selectedSchool?.id ?? null}
-              isOpen={isPanelOpen}
-              onClose={handleClosePanel}
-            />
-          </>
+                {/* School markers */}
+                {!schoolsLoading && schoolsData && (
+                  <SchoolMarkerLayer
+                    map={map}
+                    schools={getSchoolsFromResponse(schoolsData)}
+                    onSchoolClick={handleSchoolClick}
+                  />
+                )}
+
+                {/* 冠軍學校標記 */}
+                {showChampions && !championsLoading && champions && champions.length > 0 && (
+                  <ChampionMarkerLayer
+                    map={map}
+                    champions={champions}
+                    onSchoolClick={(schoolId) => {
+                      const school = getSchoolsFromResponse(schoolsData).find(s => s.id === schoolId);
+                      if (school) {
+                        handleSchoolClick(school);
+                      }
+                    }}
+                  />
+                )}
+
+                <MapControls map={map} />
+              </>
+            );
+          }}
+        </MapView>
+
+        {/* 縣市統計彈窗 */}
+        {selectedCounty && (
+          <CountyPopup
+            countyName={selectedCounty.name}
+            position={selectedCounty.position}
+            onClose={clearSelection}
+          />
         )}
+
+        {/* 學校詳情側邊面板 (Feature: 006-school-map-markers) */}
+        <SchoolDetailPanel
+          schoolId={selectedSchool?.id ?? null}
+          isOpen={isPanelOpen}
+          onClose={handleClosePanel}
+          sportTypeId={selectedSportTypeId}
+        />
 
         {/* 圖例 */}
         {!isLoading && !error && (

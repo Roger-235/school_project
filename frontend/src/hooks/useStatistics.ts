@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { StudentComparison, NationalAverage, SchoolChampion } from '@/types/statistics';
+import { StudentComparison, GradeComparisonResult, NationalAverage, SchoolChampion, SportTypeSchoolRanking } from '@/types/statistics';
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
@@ -18,6 +18,21 @@ export function useStudentComparison(studentId: number) {
     },
     enabled: !!studentId && studentId > 0,
     staleTime: 5 * 60 * 1000, // 5 分鐘
+  });
+}
+
+// 查詢學生同年級比較資料
+export function useGradeComparison(studentId: number) {
+  return useQuery({
+    queryKey: ['grade-comparison', studentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: GradeComparisonResult }>(
+        `/statistics/grade-comparison/${studentId}`
+      );
+      return data.data;
+    },
+    enabled: !!studentId && studentId > 0,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -70,6 +85,35 @@ export function useSchoolChampions() {
         '/statistics/school-champions'
       );
       return data.data.champions;
+    },
+    staleTime: 10 * 60 * 1000, // 10 分鐘
+  });
+}
+
+// 查詢指定運動項目的前N名學校
+export function useTopSchoolsBySport(sportTypeId: number, limit: number = 10) {
+  return useQuery({
+    queryKey: ['top-schools', sportTypeId, limit],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: { rankings: SportTypeSchoolRanking[]; count: number } }>(
+        `/statistics/top-schools/${sportTypeId}?limit=${limit}`
+      );
+      return data.data.rankings;
+    },
+    enabled: !!sportTypeId && sportTypeId > 0,
+    staleTime: 10 * 60 * 1000, // 10 分鐘
+  });
+}
+
+// 查詢所有運動項目的前N名學校
+export function useAllTopSchools(limit: number = 10) {
+  return useQuery({
+    queryKey: ['all-top-schools', limit],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: { rankings: Record<number, SportTypeSchoolRanking[]> } }>(
+        `/statistics/top-schools?limit=${limit}`
+      );
+      return data.data.rankings;
     },
     staleTime: 10 * 60 * 1000, // 10 分鐘
   });

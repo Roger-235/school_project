@@ -42,19 +42,25 @@ type StudentInfo struct {
 	SchoolName string `json:"school_name"`
 }
 
+type StudentRecord struct {
+	Value    float64 `json:"value"`
+	TestDate string  `json:"test_date"`
+}
+
 type Comparison struct {
-	SportTypeID       uint          `json:"sport_type_id"`
-	SportTypeName     string        `json:"sport_type_name"`
-	Category          string        `json:"category"`
-	Unit              string        `json:"unit"`
-	StudentValue      float64       `json:"student_value"`
-	StudentTestDate   string        `json:"student_test_date"`
-	NationalAvg       float64       `json:"national_avg"`
-	Difference        float64       `json:"difference"`
-	DifferencePercent float64       `json:"difference_percent"`
-	PercentileRank    int           `json:"percentile_rank"`
-	PerformanceLevel  string        `json:"performance_level"`
-	NationalStats     NationalStats `json:"national_stats"`
+	SportTypeID       uint            `json:"sport_type_id"`
+	SportTypeName     string          `json:"sport_type_name"`
+	Category          string          `json:"category"`
+	Unit              string          `json:"unit"`
+	StudentRecords    []StudentRecord `json:"student_records"`    // 最多2筆記錄
+	StudentValue      float64         `json:"student_value"`      // 保留向後兼容：最新記錄
+	StudentTestDate   string          `json:"student_test_date"`  // 保留向後兼容：最新記錄日期
+	NationalAvg       float64         `json:"national_avg"`
+	Difference        float64         `json:"difference"`
+	DifferencePercent float64         `json:"difference_percent"`
+	PercentileRank    int             `json:"percentile_rank"`
+	PerformanceLevel  string          `json:"performance_level"`
+	NationalStats     NationalStats   `json:"national_stats"`
 }
 
 type NationalStats struct {
@@ -102,8 +108,14 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 	for _, sportType := range sportTypes {
 		var champion SchoolChampion
 
+		// 根据 ValueType 决定排序方向：time 类型越小越好，其他越大越好
+		orderDirection := "DESC"
+		if sportType.ValueType == "time" {
+			orderDirection = "ASC"
+		}
+
 		query := `
-			SELECT 
+			SELECT
 				? as sport_type_id,
 				? as sport_type_name,
 				? as category,
@@ -119,12 +131,12 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 			INNER JOIN students s ON sr.student_id = s.id
 			INNER JOIN schools sch ON s.school_id = sch.id
 			WHERE sr.sport_type_id = ?
-			  AND sr.deleted_at IS NULL 
+			  AND sr.deleted_at IS NULL
 			  AND s.deleted_at IS NULL
 			  AND sch.deleted_at IS NULL
 			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
 			HAVING COUNT(DISTINCT sr.student_id) >= 3
-			ORDER BY average_value DESC
+			ORDER BY average_value ` + orderDirection + `
 			LIMIT 1
 		`
 
@@ -148,6 +160,117 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 	}
 
 	return champions, nil
+}
+
+// SportTypeSchoolRanking 學校在運動項目中的排名資訊
+type SportTypeSchoolRanking struct {
+	Rank          int     `json:"rank"`
+	SportTypeID   uint    `json:"sport_type_id"`
+	SportTypeName string  `json:"sport_type_name"`
+	Category      string  `json:"category"`
+	Unit          string  `json:"unit"`
+	SchoolID      uint    `json:"school_id"`
+	SchoolName    string  `json:"school_name"`
+	CountyName    string  `json:"county_name"`
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
+	AverageValue  float64 `json:"average_value"`
+	StudentCount  int     `json:"student_count"`
+}
+
+// GetTopSchoolsBySport 取得指定運動項目的前N名學校
+func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeID uint, limit int) ([]SportTypeSchoolRanking, error) {
+	var rankings []SportTypeSchoolRanking
+
+	// 取得運動類型資訊
+	var sportType models.SportType
+	if err := s.db.First(&sportType, sportTypeID).Error; err != nil {
+		return nil, fmt.Errorf("運動類型不存在: %w", err)
+	}
+
+	// 根据 ValueType 决定排序方向：time 类型越小越好，其他越大越好
+	orderDirection := "DESC"
+	if sportType.ValueType == "time" {
+		orderDirection = "ASC"
+	}
+
+	query := `
+		SELECT
+			ROW_NUMBER() OVER (ORDER BY avg_val ` + orderDirection + `) as ` + "`rank`" + `,
+			? as sport_type_id,
+			? as sport_type_name,
+			? as category,
+			? as unit,
+			school_id,
+			school_name,
+			county_name,
+			latitude,
+			longitude,
+			avg_val as average_value,
+			student_count
+		FROM (
+			SELECT
+				sch.id as school_id,
+				sch.name as school_name,
+				sch.county_name,
+				sch.latitude,
+				sch.longitude,
+				AVG(sr.value) as avg_val,
+				COUNT(DISTINCT sr.student_id) as student_count
+			FROM sport_records sr
+			INNER JOIN students s ON sr.student_id = s.id
+			INNER JOIN schools sch ON s.school_id = sch.id
+			WHERE sr.sport_type_id = ?
+			  AND sr.deleted_at IS NULL
+			  AND s.deleted_at IS NULL
+			  AND sch.deleted_at IS NULL
+			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
+			HAVING COUNT(DISTINCT sr.student_id) >= 3
+		) ranked
+		ORDER BY ` + "`rank`" + `
+		LIMIT ?
+	`
+
+	err := s.db.Raw(query,
+		sportType.ID,
+		sportType.Name,
+		sportType.Category,
+		sportType.DefaultUnit,
+		sportType.ID,
+		limit,
+	).Scan(&rankings).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("查詢排名失敗: %w", err)
+	}
+
+	return rankings, nil
+}
+
+// GetAllTopSchools 取得所有運動項目的前N名學校
+func (s *StatisticsService) GetAllTopSchools(ctx context.Context, limit int) (map[uint][]SportTypeSchoolRanking, error) {
+	// 取得所有運動類型
+	var sportTypes []models.SportType
+	if err := s.db.Find(&sportTypes).Error; err != nil {
+		return nil, err
+	}
+
+	result := make(map[uint][]SportTypeSchoolRanking)
+
+	// 對每個運動類型查詢排名
+	for _, sportType := range sportTypes {
+		rankings, err := s.GetTopSchoolsBySport(ctx, sportType.ID, limit)
+		if err != nil {
+			log.Printf("查詢 %s 排名失敗: %v", sportType.Name, err)
+			continue
+		}
+
+		if len(rankings) > 0 {
+			result[sportType.ID] = rankings
+		}
+	}
+
+	return result, nil
 }
 
 // CalculateNationalAverages 計算全國平均值
@@ -269,22 +392,21 @@ func (s *StatisticsService) GetStudentComparison(ctx context.Context, studentID 
 		SchoolName: student.School.Name,
 	}
 
-	// 2. 取得學生的所有最新運動記錄
+	// 2. 取得學生的所有最新運動記錄（每個項目最多2筆）
 	var records []models.SportRecord
 	query := `
         SELECT sr.*
-        FROM sport_records sr
-        INNER JOIN (
-            SELECT sport_type_id, MAX(test_date) as latest_date
-            FROM sport_records
-            WHERE student_id = ? AND deleted_at IS NULL
-            GROUP BY sport_type_id
-        ) latest ON sr.sport_type_id = latest.sport_type_id 
-                 AND sr.test_date = latest.latest_date
-        WHERE sr.student_id = ? AND sr.deleted_at IS NULL
+        FROM (
+            SELECT sr.*,
+                   ROW_NUMBER() OVER (PARTITION BY sr.sport_type_id ORDER BY sr.test_date DESC) as rn
+            FROM sport_records sr
+            WHERE sr.student_id = ? AND sr.deleted_at IS NULL
+        ) sr
+        WHERE sr.rn <= 2
+        ORDER BY sr.sport_type_id, sr.test_date DESC
     `
 
-	if err := s.db.Raw(query, studentID, studentID).Scan(&records).Error; err != nil {
+	if err := s.db.Raw(query, studentID).Scan(&records).Error; err != nil {
 		return nil, err
 	}
 
@@ -298,41 +420,64 @@ func (s *StatisticsService) GetStudentComparison(ctx context.Context, studentID 
 		s.db.Preload("SportType").Where("id IN ?", recordIDs).Find(&records)
 	}
 
-	// 3. 取得對應的全國平均值並計算比較
+	// 3. 按運動項目分組記錄（每組最多2筆）
+	recordsBySportType := make(map[uint][]models.SportRecord)
+	for _, record := range records {
+		recordsBySportType[record.SportTypeID] = append(recordsBySportType[record.SportTypeID], record)
+	}
+
+	// 4. 取得對應的全國平均值並計算比較
 	var comparisons []Comparison
 	percentileSum := 0
 
-	for _, record := range records {
+	for sportTypeID, sportRecords := range recordsBySportType {
+		if len(sportRecords) == 0 {
+			continue
+		}
+
+		// 使用第一筆（最新）記錄進行比較計算
+		latestRecord := sportRecords[0]
+
 		var natAvg models.NationalAverage
 		err := s.db.Preload("SportType").
 			Where("sport_type_id = ? AND grade = ? AND gender = ?",
-				record.SportTypeID, student.Grade, student.Gender).
+				sportTypeID, student.Grade, student.Gender).
 			First(&natAvg).Error
 
 		if err != nil {
 			log.Printf("無全國平均數據: sport_type_id=%d, grade=%d, gender=%s",
-				record.SportTypeID, student.Grade, student.Gender)
+				sportTypeID, student.Grade, student.Gender)
 			continue
 		}
 
-		// 計算差異和百分位
-		diff := record.Value - natAvg.AvgValue
+		// 計算差異和百分位（使用最新記錄）
+		diff := latestRecord.Value - natAvg.AvgValue
 		diffPercent := 0.0
 		if natAvg.AvgValue != 0 {
 			diffPercent = (diff / natAvg.AvgValue) * 100
 		}
 
-		percentileRank := calculatePercentileRank(record.Value, natAvg)
+		percentileRank := calculatePercentileRank(latestRecord.Value, natAvg)
 		performanceLevel := getPerformanceLevel(percentileRank)
 		percentileSum += percentileRank
 
+		// 構建學生記錄數組（最多2筆）
+		var studentRecords []StudentRecord
+		for _, rec := range sportRecords {
+			studentRecords = append(studentRecords, StudentRecord{
+				Value:    rec.Value,
+				TestDate: rec.TestDate.Format("2006-01-02"),
+			})
+		}
+
 		comparisons = append(comparisons, Comparison{
-			SportTypeID:       record.SportTypeID,
-			SportTypeName:     record.SportType.Name,
-			Category:          record.SportType.Category,
-			Unit:              record.SportType.DefaultUnit,
-			StudentValue:      record.Value,
-			StudentTestDate:   record.TestDate.Format("2006-01-02"),
+			SportTypeID:       sportTypeID,
+			SportTypeName:     latestRecord.SportType.Name,
+			Category:          latestRecord.SportType.Category,
+			Unit:              latestRecord.SportType.DefaultUnit,
+			StudentRecords:    studentRecords,                          // 新增：多筆記錄
+			StudentValue:      latestRecord.Value,                      // 保留向後兼容
+			StudentTestDate:   latestRecord.TestDate.Format("2006-01-02"), // 保留向後兼容
 			NationalAvg:       natAvg.AvgValue,
 			Difference:        diff,
 			DifferencePercent: diffPercent,
@@ -348,13 +493,133 @@ func (s *StatisticsService) GetStudentComparison(ctx context.Context, studentID 
 		})
 	}
 
-	// 4. 計算總結
+	// 5. 計算總結
 	summary := calculateSummary(comparisons, percentileSum)
 
 	return &ComparisonResult{
 		Student:     studentInfo,
 		Comparisons: comparisons,
 		Summary:     summary,
+	}, nil
+}
+
+// GradeComparison 同年級比較項目
+type GradeComparison struct {
+	SportTypeID   uint    `json:"sport_type_id"`
+	SportTypeName string  `json:"sport_type_name"`
+	Category      string  `json:"category"`
+	Unit          string  `json:"unit"`
+	StudentValue  float64 `json:"student_value"`
+	GradeAvg      float64 `json:"grade_avg"`
+	GradeRank     int     `json:"grade_rank"`
+	TotalStudents int     `json:"total_students"`
+	GradeBest     float64 `json:"grade_best"`
+}
+
+// GradeComparisonResult 同年級比較結果
+type GradeComparisonResult struct {
+	Student     StudentInfo       `json:"student"`
+	Comparisons []GradeComparison `json:"comparisons"`
+}
+
+// GetGradeComparison 取得學生同年級比較資料
+func (s *StatisticsService) GetGradeComparison(ctx context.Context, studentID uint) (*GradeComparisonResult, error) {
+	// 1. 取得學生資訊
+	var student models.Student
+	if err := s.db.Preload("School").First(&student, studentID).Error; err != nil {
+		return nil, fmt.Errorf("學生不存在: %w", err)
+	}
+
+	studentInfo := StudentInfo{
+		ID:         student.ID,
+		Name:       student.Name,
+		Grade:      student.Grade,
+		Gender:     student.Gender,
+		SchoolName: student.School.Name,
+	}
+
+	// 2. 取得所有運動類型
+	var sportTypes []models.SportType
+	if err := s.db.Find(&sportTypes).Error; err != nil {
+		return nil, err
+	}
+
+	var comparisons []GradeComparison
+
+	for _, sportType := range sportTypes {
+		// 取得該學生此項目的最新成績
+		var studentValue float64
+		err := s.db.Raw(`
+			SELECT sr.value FROM sport_records sr
+			WHERE sr.student_id = ? AND sr.sport_type_id = ? AND sr.deleted_at IS NULL
+			ORDER BY sr.test_date DESC LIMIT 1
+		`, studentID, sportType.ID).Scan(&studentValue).Error
+
+		if err != nil || studentValue == 0 {
+			continue
+		}
+
+		// 取得同年級所有學生此項目的最新成績
+		type peerRecord struct {
+			StudentID uint
+			Value     float64
+		}
+		var peers []peerRecord
+		s.db.Raw(`
+			SELECT sr.student_id, sr.value
+			FROM sport_records sr
+			INNER JOIN (
+				SELECT student_id, MAX(test_date) as latest
+				FROM sport_records
+				WHERE sport_type_id = ? AND deleted_at IS NULL
+				GROUP BY student_id
+			) latest ON sr.student_id = latest.student_id AND sr.test_date = latest.latest
+			INNER JOIN students s ON sr.student_id = s.id
+			WHERE sr.sport_type_id = ? AND s.grade = ? AND sr.deleted_at IS NULL AND s.deleted_at IS NULL
+		`, sportType.ID, sportType.ID, student.Grade).Scan(&peers)
+
+		if len(peers) < 2 {
+			continue
+		}
+
+		// 計算年級平均
+		sum := 0.0
+		for _, p := range peers {
+			sum += p.Value
+		}
+		gradeAvg := sum / float64(len(peers))
+
+		// 根據 ValueType 決定排序方向並計算排名
+		if sportType.ValueType == "time" {
+			sort.Slice(peers, func(i, j int) bool { return peers[i].Value < peers[j].Value })
+		} else {
+			sort.Slice(peers, func(i, j int) bool { return peers[i].Value > peers[j].Value })
+		}
+
+		rank := 1
+		for _, p := range peers {
+			if p.StudentID == studentID {
+				break
+			}
+			rank++
+		}
+
+		comparisons = append(comparisons, GradeComparison{
+			SportTypeID:   sportType.ID,
+			SportTypeName: sportType.Name,
+			Category:      sportType.Category,
+			Unit:          sportType.DefaultUnit,
+			StudentValue:  studentValue,
+			GradeAvg:      math.Round(gradeAvg*100) / 100,
+			GradeRank:     rank,
+			TotalStudents: len(peers),
+			GradeBest:     peers[0].Value,
+		})
+	}
+
+	return &GradeComparisonResult{
+		Student:     studentInfo,
+		Comparisons: comparisons,
 	}, nil
 }
 

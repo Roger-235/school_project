@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wei979/ICACP/backend/internal/models"
@@ -629,5 +630,97 @@ func (h *SportRecordHandler) GetSchoolRanking(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": ranking,
+	})
+}
+
+// GetBulkScores godoc
+// @Summary Get scores for multiple students in a specific sport type
+// @Description Bulk fetch the latest score for each student in a specific sport type
+// @Tags sport-records
+// @Accept json
+// @Produce json
+// @Param student_ids query string true "Comma-separated student IDs" example(1,2,3)
+// @Param sport_type_id query int true "Sport Type ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/v1/sport-records/bulk-scores [get]
+func (h *SportRecordHandler) GetBulkScores(c *gin.Context) {
+	studentIDsStr := c.Query("student_ids")
+	sportTypeIDStr := c.Query("sport_type_id")
+
+	if studentIDsStr == "" || sportTypeIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "MISSING_PARAM",
+				"message": "student_ids 和 sport_type_id 為必填參數",
+			},
+		})
+		return
+	}
+
+	// Parse sport type ID
+	sportTypeID, err := strconv.ParseUint(sportTypeIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_ID",
+				"message": "無效的運動項目 ID",
+			},
+		})
+		return
+	}
+
+	// Parse student IDs from comma-separated string
+	studentIDs := make([]uint, 0)
+
+	// Split by comma
+	idStrings := strings.Split(studentIDsStr, ",")
+	for _, idStr := range idStrings {
+		// Trim whitespace
+		idStr = strings.TrimSpace(idStr)
+		if idStr == "" {
+			continue
+		}
+
+		id, err := strconv.ParseUint(idStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": gin.H{
+					"code":    "INVALID_ID",
+					"message": "無效的學生 ID: " + idStr,
+				},
+			})
+			return
+		}
+		studentIDs = append(studentIDs, uint(id))
+	}
+
+	if len(studentIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_PARAM",
+				"message": "至少需要一個有效的學生 ID",
+			},
+		})
+		return
+	}
+
+	results, err := h.service.GetStudentScoresBySportType(studentIDs, uint(sportTypeID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "INTERNAL_ERROR",
+				"message": "無法取得學生成績",
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"scores": results,
+			"count":  len(results),
+		},
 	})
 }

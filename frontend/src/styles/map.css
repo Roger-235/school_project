@@ -241,11 +241,11 @@
    User Story 3: 地圖導航控制按鈕
    ======================================== */
 
-/* 控制按鈕容器 */
+/* 控制按鈕容器 - 移到右侧避免与排名榜冲突 */
 .map-controls {
   position: absolute;
-  top: 80px;
-  left: 12px;
+  top: 12px;
+  right: 12px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -551,6 +551,7 @@
   display: flex;
   background: #f9fafb;
   padding: 10px 12px;
+  padding-right: 32px; /* Make room for expand button */
   border-radius: 8px 8px 0 0;
   font-size: 12px;
   font-weight: 600;
@@ -561,6 +562,7 @@
 .student-list-item {
   display: flex;
   padding: 12px;
+  padding-right: 32px; /* Make room for expand button */
   border-bottom: 1px solid #f3f4f6;
   font-size: 14px;
   transition: background 0.15s ease;
@@ -572,6 +574,41 @@
 
 .student-list-item:last-child {
   border-bottom: none;
+}
+
+/* Expanded student records */
+.student-records-expanded {
+  background: #f9fafb;
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  animation: expandRecords 0.2s ease-out;
+}
+
+@keyframes expandRecords {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.student-record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.student-record-item:last-child {
+  margin-bottom: 0;
 }
 
 .student-col-name {
