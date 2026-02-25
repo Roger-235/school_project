@@ -167,6 +167,8 @@ func main() {
 	{
 		statisticsRoutes.GET("/student-comparison/:studentId", statisticsHandler.GetStudentComparison)
 		statisticsRoutes.GET("/grade-comparison/:studentId", statisticsHandler.GetGradeComparison)
+		statisticsRoutes.GET("/county-comparison/:studentId", statisticsHandler.GetCountyComparison)
+		statisticsRoutes.GET("/county-sport-averages/:countyName", statisticsHandler.GetCountySportAverages)
 		statisticsRoutes.GET("/national-averages", statisticsHandler.GetNationalAverages)
 		statisticsRoutes.POST("/national-averages/calculate", statisticsHandler.CalculateNationalAverages)
 		statisticsRoutes.GET("/school-champions", statisticsHandler.GetSchoolChampions)

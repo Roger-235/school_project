@@ -3,6 +3,7 @@
  * Feature: 003-student-sports-data
  */
 
+import { useMemo } from 'react'
 import SportRecordCard from './SportRecordCard'
 import { SportRecord, Pagination } from '@/types/sports'
 
@@ -29,6 +30,28 @@ export default function SportRecordList({
   emptyMessage = '尚無運動記錄',
   showStudent = false,
 }: SportRecordListProps) {
+  // 找出每個運動項目的最新記錄，並為其配對前次記錄
+  const previousRecordMap = useMemo(() => {
+    const map = new Map<number, SportRecord>();
+    const grouped = new Map<number, SportRecord[]>();
+
+    records.forEach(record => {
+      const typeId = record.sport_type_id;
+      if (!grouped.has(typeId)) grouped.set(typeId, []);
+      grouped.get(typeId)!.push(record);
+    });
+
+    grouped.forEach(recs => {
+      const sorted = [...recs].sort(
+        (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime()
+      );
+      if (sorted.length >= 2) {
+        map.set(sorted[0].id, sorted[1]); // 最新記錄 -> 前次記錄
+      }
+    });
+
+    return map;
+  }, [records]);
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -67,6 +90,7 @@ export default function SportRecordList({
             key={record.id}
             record={record}
             studentId={studentId}
+            previousRecord={previousRecordMap.get(record.id)}
             onDelete={onDelete}
             onViewHistory={onViewHistory}
             showStudent={showStudent}

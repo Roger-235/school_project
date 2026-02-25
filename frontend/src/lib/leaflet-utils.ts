@@ -38,8 +38,8 @@ export const COUNTY_COLORS = {
   hasData: '#22c55e',      // Green for counties with data
   noData: '#9ca3af',        // Gray for counties without data
   border: '#374151',        // Dark gray border for better visibility
-  hoverOpacity: 0.4,        // Opacity on hover (was 0.8)
-  defaultOpacity: 0.25,     // Default opacity (was 0.7) - allows map features to show through
+  hoverOpacity: 0.75,       // Opacity on hover
+  defaultOpacity: 0.60,     // Default opacity - opaque enough to stand out against gray background
 };
 
 /**

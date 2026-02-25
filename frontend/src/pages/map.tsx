@@ -57,10 +57,14 @@ const ChampionsList = dynamic(() => import('../components/map/ChampionsList'), {
   ssr: false,
 });
 
+const CountyComparisonPanel = dynamic(() => import('../components/map/CountyComparisonPanel'), {
+  ssr: false,
+});
+
 export default function MapPage() {
   const [isMobile, setIsMobile] = useState(false);
   const { data, isLoading, error, refetch } = useAllCountyStats();
-  const { selectedCounty, selectCounty, clearSelection } = useMapState();
+  const { selectedCounty, secondCounty, isCompareMode, selectCounty, clearSelection, clearComparison } = useMapState();
 
   // School markers state (Feature: 006-school-map-markers)
   const { data: schoolsData, isLoading: schoolsLoading } = useSchoolsForMap();
@@ -172,7 +176,7 @@ export default function MapPage() {
       <div className="relative h-[calc(100vh-140px)]">
         {/* 🎯 在這裡加入冠軍榜單（第一個元素） */}
         {!championsLoading && champions && champions.length > 0 && (
-          <div className="absolute left-4 top-4 bottom-4 z-[999] flex items-stretch">
+          <div className="absolute left-4 top-4 h-[calc(100vh-180px)] z-[999]">
             <ChampionsList
               champions={champions}
               onChampionClick={handleChampionClick}
@@ -271,11 +275,27 @@ export default function MapPage() {
           }}
         </MapView>
 
-        {/* 縣市統計彈窗 */}
-        {selectedCounty && (
+        {/* 縣市統計彈窗（單選模式，非比較模式下顯示） */}
+        {selectedCounty && !isCompareMode && (
           <CountyPopup
             countyName={selectedCounty.name}
             position={selectedCounty.position}
+            onClose={clearSelection}
+          />
+        )}
+
+        {/* 選擇第一個縣市後的提示 */}
+        {selectedCounty && !isCompareMode && (
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-sm px-4 py-2 rounded-full shadow-lg z-[1001] pointer-events-none">
+            已選擇 {selectedCounty.name}，點選另一個縣市進行比較
+          </div>
+        )}
+
+        {/* 雙縣市比較面板 */}
+        {isCompareMode && selectedCounty && secondCounty && (
+          <CountyComparisonPanel
+            county1={selectedCounty.name}
+            county2={secondCounty.name}
             onClose={clearSelection}
           />
         )}

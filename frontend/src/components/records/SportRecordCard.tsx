@@ -9,6 +9,7 @@ import { SportRecord } from '@/types/sports'
 interface SportRecordCardProps {
   record: SportRecord
   studentId: number
+  previousRecord?: SportRecord
   onDelete?: (id: number) => void
   onViewHistory?: (id: number) => void
   showStudent?: boolean
@@ -17,6 +18,7 @@ interface SportRecordCardProps {
 export default function SportRecordCard({
   record,
   studentId,
+  previousRecord,
   onDelete,
   onViewHistory,
   showStudent = false,
@@ -91,6 +93,19 @@ export default function SportRecordCard({
           <p className="mt-1 text-sm text-gray-500">
             測驗日期：{formatDate(record.test_date)}
           </p>
+
+          {/* Previous Record */}
+          {previousRecord && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <div className="flex items-baseline gap-1">
+                <span className="text-xs text-gray-400">前次：</span>
+                <span className="text-sm font-medium text-blue-600">
+                  {formatValue(previousRecord.value, record.sport_type?.default_unit || '')} {record.sport_type?.default_unit}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400">{formatDate(previousRecord.test_date)}</p>
+            </div>
+          )}
 
           {/* Student (if showing) */}
           {showStudent && record.student && (

@@ -303,6 +303,11 @@
   display: none !important;
 }
 
+/* 讓底圖磁磚（包含其他國家）變灰階，突顯台灣縣市覆蓋層 */
+.leaflet-tile-pane {
+  filter: grayscale(90%) brightness(1.05);
+}
+
 /* ========================================
    Feature 006: School Map Markers
    ======================================== */

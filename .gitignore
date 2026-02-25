@@ -15,6 +15,10 @@ dist/
 build/
 .next/
 *.exe
+backend/main
+
+# Seed / test data scripts
+backend/internal/database/seed/performance_test.go
 
 # IDE
 .vscode/

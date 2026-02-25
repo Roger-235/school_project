@@ -66,6 +66,41 @@ export interface GradeComparisonResult {
   comparisons: GradeComparison[];
 }
 
+export interface CountyComparison {
+  sport_type_id: number;
+  sport_type_name: string;
+  category: string;
+  unit: string;
+  student_value: number;
+  county_avg: number;
+  county_rank: number;
+  total_students: number;
+  county_best: number;
+  county_name: string;
+}
+
+export interface CountyComparisonResult {
+  student: {
+    id: number;
+    name: string;
+    grade: number;
+    gender: string;
+    school_name: string;
+  };
+  comparisons: CountyComparison[];
+}
+
+export interface CountySportAverage {
+  sport_type_id: number;
+  sport_type_name: string;
+  category: string;
+  unit: string;
+  value_type: string;
+  avg_value: number;
+  school_count: number;
+  student_count: number;
+}
+
 export interface NationalAverage {
   id: number;
   sport_type_id: number;

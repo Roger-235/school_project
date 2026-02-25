@@ -135,7 +135,7 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 			  AND s.deleted_at IS NULL
 			  AND sch.deleted_at IS NULL
 			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
-			HAVING COUNT(DISTINCT sr.student_id) >= 3
+			HAVING COUNT(DISTINCT sr.student_id) >= 1
 			ORDER BY average_value ` + orderDirection + `
 			LIMIT 1
 		`
@@ -178,8 +178,8 @@ type SportTypeSchoolRanking struct {
 	StudentCount  int     `json:"student_count"`
 }
 
-// GetTopSchoolsBySport 取得指定運動項目的前N名學校
-func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeID uint, limit int) ([]SportTypeSchoolRanking, error) {
+// GetTopSchoolsBySport 取得指定運動項目的前N名學校（支援縣市過濾）
+func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeID uint, limit int, county ...string) ([]SportTypeSchoolRanking, error) {
 	var rankings []SportTypeSchoolRanking
 
 	// 取得運動類型資訊
@@ -192,6 +192,21 @@ func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeI
 	orderDirection := "DESC"
 	if sportType.ValueType == "time" {
 		orderDirection = "ASC"
+	}
+
+	// 构建 WHERE 子句用于县市过滤
+	whereClause := ""
+	queryArgs := []interface{}{
+		sportType.ID,
+		sportType.Name,
+		sportType.Category,
+		sportType.DefaultUnit,
+		sportType.ID,
+	}
+	
+	if len(county) > 0 && county[0] != "" {
+		whereClause = "AND sch.county_name = ?"
+		queryArgs = append(queryArgs, county[0])
 	}
 
 	query := `
@@ -224,21 +239,18 @@ func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeI
 			  AND sr.deleted_at IS NULL
 			  AND s.deleted_at IS NULL
 			  AND sch.deleted_at IS NULL
+			  ` + whereClause + `
 			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
-			HAVING COUNT(DISTINCT sr.student_id) >= 3
+			HAVING COUNT(DISTINCT sr.student_id) >= 1
 		) ranked
 		ORDER BY ` + "`rank`" + `
 		LIMIT ?
 	`
 
-	err := s.db.Raw(query,
-		sportType.ID,
-		sportType.Name,
-		sportType.Category,
-		sportType.DefaultUnit,
-		sportType.ID,
-		limit,
-	).Scan(&rankings).Error
+	// 添加 limit 到查询参数
+	queryArgs = append(queryArgs, limit)
+
+	err := s.db.Raw(query, queryArgs...).Scan(&rankings).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("查詢排名失敗: %w", err)
@@ -621,6 +633,200 @@ func (s *StatisticsService) GetGradeComparison(ctx context.Context, studentID ui
 		Student:     studentInfo,
 		Comparisons: comparisons,
 	}, nil
+}
+
+// CountyComparison 縣市內比較項目
+type CountyComparison struct {
+	SportTypeID   uint    `json:"sport_type_id"`
+	SportTypeName string  `json:"sport_type_name"`
+	Category      string  `json:"category"`
+	Unit          string  `json:"unit"`
+	StudentValue  float64 `json:"student_value"`
+	CountyAvg     float64 `json:"county_avg"`
+	CountyRank    int     `json:"county_rank"`
+	TotalStudents int     `json:"total_students"`
+	CountyBest    float64 `json:"county_best"`
+	CountyName    string  `json:"county_name"`
+}
+
+// CountyComparisonResult 縣市內比較結果
+type CountyComparisonResult struct {
+	Student     StudentInfo       `json:"student"`
+	Comparisons []CountyComparison `json:"comparisons"`
+}
+
+// GetCountyComparison 取得學生縣市內比較資料（同縣市 + 同年級 + 同性別）
+func (s *StatisticsService) GetCountyComparison(ctx context.Context, studentID uint) (*CountyComparisonResult, error) {
+	var student models.Student
+	if err := s.db.Preload("School").First(&student, studentID).Error; err != nil {
+		return nil, fmt.Errorf("學生不存在: %w", err)
+	}
+
+	countyName := student.School.CountyName
+	studentInfo := StudentInfo{
+		ID:         student.ID,
+		Name:       student.Name,
+		Grade:      student.Grade,
+		Gender:     student.Gender,
+		SchoolName: student.School.Name,
+	}
+
+	var sportTypes []models.SportType
+	if err := s.db.Find(&sportTypes).Error; err != nil {
+		return nil, err
+	}
+
+	var comparisons []CountyComparison
+
+	for _, sportType := range sportTypes {
+		// 取得該學生此項目的最新成績
+		var studentValue float64
+		err := s.db.Raw(`
+			SELECT sr.value FROM sport_records sr
+			WHERE sr.student_id = ? AND sr.sport_type_id = ? AND sr.deleted_at IS NULL
+			ORDER BY sr.test_date DESC LIMIT 1
+		`, studentID, sportType.ID).Scan(&studentValue).Error
+
+		if err != nil || studentValue == 0 {
+			continue
+		}
+
+		// 取得同縣市 + 同年級 + 同性別的所有學生最新成績
+		type peerRecord struct {
+			StudentID uint
+			Value     float64
+		}
+		var peers []peerRecord
+		s.db.Raw(`
+			SELECT sr.student_id, sr.value
+			FROM sport_records sr
+			INNER JOIN (
+				SELECT student_id, MAX(test_date) as latest
+				FROM sport_records
+				WHERE sport_type_id = ? AND deleted_at IS NULL
+				GROUP BY student_id
+			) latest ON sr.student_id = latest.student_id AND sr.test_date = latest.latest
+			INNER JOIN students st ON sr.student_id = st.id
+			INNER JOIN schools sch ON st.school_id = sch.id
+			WHERE sr.sport_type_id = ?
+			  AND sch.county_name = ?
+			  AND st.grade = ?
+			  AND st.gender = ?
+			  AND sr.deleted_at IS NULL
+			  AND st.deleted_at IS NULL
+		`, sportType.ID, sportType.ID, countyName, student.Grade, student.Gender).Scan(&peers)
+
+		if len(peers) < 2 {
+			continue
+		}
+
+		// 計算縣市平均
+		sum := 0.0
+		for _, p := range peers {
+			sum += p.Value
+		}
+		countyAvg := sum / float64(len(peers))
+
+		// 根據 ValueType 決定排序方向並計算排名
+		if sportType.ValueType == "time" {
+			sort.Slice(peers, func(i, j int) bool { return peers[i].Value < peers[j].Value })
+		} else {
+			sort.Slice(peers, func(i, j int) bool { return peers[i].Value > peers[j].Value })
+		}
+
+		rank := 1
+		for _, p := range peers {
+			if p.StudentID == studentID {
+				break
+			}
+			rank++
+		}
+
+		comparisons = append(comparisons, CountyComparison{
+			SportTypeID:   sportType.ID,
+			SportTypeName: sportType.Name,
+			Category:      sportType.Category,
+			Unit:          sportType.DefaultUnit,
+			StudentValue:  studentValue,
+			CountyAvg:     math.Round(countyAvg*100) / 100,
+			CountyRank:    rank,
+			TotalStudents: len(peers),
+			CountyBest:    peers[0].Value,
+			CountyName:    countyName,
+		})
+	}
+
+	return &CountyComparisonResult{
+		Student:     studentInfo,
+		Comparisons: comparisons,
+	}, nil
+}
+
+// CountySportAverage 縣市各運動項目平均成績
+type CountySportAverage struct {
+	SportTypeID   uint    `json:"sport_type_id"`
+	SportTypeName string  `json:"sport_type_name"`
+	Category      string  `json:"category"`
+	Unit          string  `json:"unit"`
+	ValueType     string  `json:"value_type"`
+	AvgValue      float64 `json:"avg_value"`
+	SchoolCount   int     `json:"school_count"`
+	StudentCount  int     `json:"student_count"`
+}
+
+// GetCountySportAverages 取得縣市各運動項目平均成績（用於縣市比較）
+func (s *StatisticsService) GetCountySportAverages(ctx context.Context, countyName string) ([]CountySportAverage, error) {
+	var sportTypes []models.SportType
+	if err := s.db.Find(&sportTypes).Error; err != nil {
+		return nil, err
+	}
+
+	var result []CountySportAverage
+
+	for _, sportType := range sportTypes {
+		type row struct {
+			AvgValue     float64
+			SchoolCount  int
+			StudentCount int
+		}
+		var r row
+		s.db.Raw(`
+			SELECT
+				AVG(sr.value) as avg_value,
+				COUNT(DISTINCT sch.id) as school_count,
+				COUNT(DISTINCT sr.student_id) as student_count
+			FROM sport_records sr
+			INNER JOIN (
+				SELECT student_id, MAX(test_date) as latest
+				FROM sport_records
+				WHERE sport_type_id = ? AND deleted_at IS NULL
+				GROUP BY student_id
+			) latest ON sr.student_id = latest.student_id AND sr.test_date = latest.latest
+			INNER JOIN students st ON sr.student_id = st.id
+			INNER JOIN schools sch ON st.school_id = sch.id
+			WHERE sr.sport_type_id = ?
+			  AND sch.county_name = ?
+			  AND sr.deleted_at IS NULL
+			  AND st.deleted_at IS NULL
+		`, sportType.ID, sportType.ID, countyName).Scan(&r)
+
+		if r.StudentCount == 0 {
+			continue
+		}
+
+		result = append(result, CountySportAverage{
+			SportTypeID:   sportType.ID,
+			SportTypeName: sportType.Name,
+			Category:      sportType.Category,
+			Unit:          sportType.DefaultUnit,
+			ValueType:     sportType.ValueType,
+			AvgValue:      math.Round(r.AvgValue*100) / 100,
+			SchoolCount:   r.SchoolCount,
+			StudentCount:  r.StudentCount,
+		})
+	}
+
+	return result, nil
 }
 
 // GetNationalAverages 取得全國平均值列表 (帶快取)
