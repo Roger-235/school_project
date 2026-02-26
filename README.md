@@ -8,8 +8,9 @@ ICACP (Integrated Children's Athletic Capacity Platform) 是一個專為台灣�
 
 - **學校管理**：支援台灣 22 縣市學校資料管理
 - **學生管理**：學生基本資料與學籍管理
-- **運動記錄**：體適能測驗成績登錄與歷史追蹤
-- **地圖視覺化**：台灣地圖顯示各縣市資料統計
+- **運動記錄**：體適能測驗成績登錄、歷史追蹤與前次成績對比
+- **地圖視覺化**：台灣地圖顯示各縣市資料統計，支援雙縣市並排比較
+- **成績比較分析**：全國比較、縣市內比較、同年級比較三種維度
 - **Excel 匯入**：批次匯入學生名單與運動記錄
 - **分析報表**：學生表現趨勢、進步分析、學校排名
 
@@ -24,6 +25,7 @@ ICACP (Integrated Children's Athletic Capacity Platform) 是一個專為台灣�
 | 資料庫 | MySQL 8.0+ |
 | 快取 | Redis 7.x |
 | 地圖 | Leaflet.js, React-Leaflet |
+| 圖表 | Recharts |
 | 狀態管理 | React Query v5 |
 
 ---
@@ -89,6 +91,10 @@ ICACP/
 │   ├── src/
 │   │   ├── pages/         # 頁面元件
 │   │   ├── components/    # UI 元件
+│   │   │   ├── map/       # 地圖元件
+│   │   │   ├── statistics/# 統計比較元件
+│   │   │   ├── records/   # 運動記錄元件
+│   │   │   └── students/  # 學生管理元件
 │   │   ├── hooks/         # React Query Hooks
 │   │   ├── lib/           # 工具函數
 │   │   └── types/         # TypeScript 型別
@@ -120,6 +126,10 @@ ICACP/
 | 運動類型 | GET /api/v1/sport-types | 運動類型定義 |
 | 運動記錄 | GET /api/v1/sport-records | 測驗記錄管理 |
 | 縣市統計 | GET /api/v1/counties/statistics | 各縣市資料統計 |
+| 全國比較 | GET /api/v1/statistics/comparison/:studentId | 學生全國成績比較 |
+| 縣市內比較 | GET /api/v1/statistics/county-comparison/:studentId | 學生縣市內成績比較 |
+| 同年級比較 | GET /api/v1/statistics/grade-comparison/:studentId | 學生同年級成績比較 |
+| 縣市平均 | GET /api/v1/statistics/county-sport-averages/:countyName | 縣市各項目平均值 |
 | Excel 匯入 | POST /api/v1/import/* | 批次資料匯入 |
 
 詳細 API 文件請參考 [docs/API.md](docs/API.md)。
@@ -223,11 +233,14 @@ sudo systemctl start sport-backend
 - [x] 學校資料管理 (CRUD)
 - [x] 學生資料管理 (CRUD)
 - [x] 運動記錄管理 (CRUD + 稽核軌跡)
-- [x] 台灣地圖視覺化
+- [x] 運動記錄前次成績對比顯示
+- [x] 台灣地圖視覺化（灰階底圖 + 縣市著色層）
+- [x] 地圖雙縣市選取並排比較
 - [x] 縣市統計與 Redis 快取
 - [x] Excel 批次匯入（學生、運動記錄）
 - [x] 學生表現分析與趨勢圖表
 - [x] 全域導覽與麵包屑
+- [x] 學生成績比較：全國 / 縣市內 / 同年級 三維度
 
 ## 待完成功能
 
