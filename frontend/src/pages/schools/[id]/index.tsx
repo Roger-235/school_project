@@ -140,6 +140,20 @@ export default function SchoolDetailPage() {
             <dt className="text-sm font-medium text-gray-500">學生人數</dt>
             <dd className="mt-1 text-sm text-gray-900">{pagination.total} 位</dd>
           </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">最後上傳體適能成績</dt>
+            <dd className="mt-1 text-sm text-gray-900">
+              {school.last_records_uploaded_at
+                ? new Date(school.last_records_uploaded_at).toLocaleString('zh-TW', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : '尚未上傳'}
+            </dd>
+          </div>
         </dl>
       </div>
 

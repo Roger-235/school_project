@@ -755,6 +755,11 @@ func (s *ImportService) ExecuteRecordsImport(previewID string, includeWarnings b
 		return nil, err
 	}
 
+	// Update school's last_records_uploaded_at timestamp
+	now := time.Now()
+	s.db.Model(&models.School{}).Where("id = ?", preview.SchoolID).
+		Update("last_records_uploaded_at", now)
+
 	// Mark preview as executed
 	s.store.MarkExecuted(previewID)
 

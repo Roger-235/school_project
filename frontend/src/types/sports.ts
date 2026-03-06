@@ -18,6 +18,7 @@ export interface School {
   county_name: TaiwanCountyName
   address?: string
   phone?: string
+  last_records_uploaded_at?: string | null
   created_at: string
   updated_at: string
   student_count?: number

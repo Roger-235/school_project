@@ -25,6 +25,24 @@ interface SchoolMarkerLayerProps {
   onSchoolClick: (school: SchoolMapData) => void;
 }
 
+// Returns upload status color and label based on last_records_uploaded_at
+function getUploadStatus(lastUploadedAt: string | null | undefined): {
+  color: string;
+  label: string;
+} {
+  if (!lastUploadedAt) {
+    return { color: '#9ca3af', label: '尚未上傳成績' };
+  }
+  const diffDays = (Date.now() - new Date(lastUploadedAt).getTime()) / (1000 * 60 * 60 * 24);
+  if (diffDays <= 30) {
+    return { color: '#22c55e', label: `最後上傳：${new Date(lastUploadedAt).toLocaleDateString('zh-TW')}` };
+  } else if (diffDays <= 90) {
+    return { color: '#eab308', label: `最後上傳：${new Date(lastUploadedAt).toLocaleDateString('zh-TW')}` };
+  } else {
+    return { color: '#f97316', label: `最後上傳：${new Date(lastUploadedAt).toLocaleDateString('zh-TW')}` };
+  }
+}
+
 export default function SchoolMarkerLayer({
   map,
   schools,
@@ -66,10 +84,10 @@ export default function SchoolMarkerLayer({
           clusterGroupRef.current = null;
         }
 
-        // Create custom school icon
-        const schoolIcon = L.divIcon({
+        // Helper to create a color-coded school icon
+        const createSchoolIcon = (color: string) => L.divIcon({
           html: `
-            <div class="school-marker">
+            <div class="school-marker" style="color: ${color};">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                 <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
               </svg>
@@ -117,8 +135,9 @@ export default function SchoolMarkerLayer({
 
         // Add markers for each school
         schools.forEach((school) => {
+          const { color, label } = getUploadStatus(school.last_records_uploaded_at);
           const marker = L.marker([school.latitude, school.longitude], {
-            icon: schoolIcon,
+            icon: createSchoolIcon(color),
             title: school.name,
           });
 
@@ -127,7 +146,8 @@ export default function SchoolMarkerLayer({
             `<div class="school-tooltip">
               <strong>${school.name}</strong><br/>
               <span class="text-gray-600">${school.county_name}</span><br/>
-              <span class="text-green-600">學生數: ${school.student_count}</span>
+              <span class="text-green-600">學生數: ${school.student_count}</span><br/>
+              <span style="color: ${color};">${label}</span>
             </div>`,
             {
               direction: 'top',

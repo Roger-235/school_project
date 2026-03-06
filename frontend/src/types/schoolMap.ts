@@ -11,6 +11,7 @@ export interface SchoolMapData {
   longitude: number;
   student_count: number;
   county_name: string;
+  last_records_uploaded_at?: string | null;
 }
 
 // API response for schools map endpoint

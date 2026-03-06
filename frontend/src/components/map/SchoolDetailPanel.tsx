@@ -371,6 +371,20 @@ export default function SchoolDetailPanel({
                     {school.student_count ?? school.students?.length ?? 0} 人
                   </span>
                 </div>
+                <div className="info-item">
+                  <span className="info-label">最後上傳成績</span>
+                  <span className="info-value">
+                    {school.last_records_uploaded_at
+                      ? new Date(school.last_records_uploaded_at).toLocaleString('zh-TW', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '尚未上傳'}
+                  </span>
+                </div>
               </div>
 
               {/* Student List Section */}

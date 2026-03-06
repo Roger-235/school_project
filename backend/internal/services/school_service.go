@@ -184,6 +184,7 @@ func (s *SchoolService) ListForMap() ([]models.SchoolMapData, int, error) {
 			schools.latitude,
 			schools.longitude,
 			schools.county_name,
+			schools.last_records_uploaded_at,
 			(SELECT COUNT(*) FROM students WHERE students.school_id = schools.id AND students.deleted_at IS NULL) as student_count
 		FROM schools
 		WHERE schools.deleted_at IS NULL
