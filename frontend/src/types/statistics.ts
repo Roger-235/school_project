@@ -133,6 +133,8 @@ export interface SchoolChampion {
   longitude: number;
   average_value: number;
   student_count: number;
+  top_student_name: string;
+  top_student_value: number;
 }
 
 export interface SportTypeSchoolRanking {
@@ -148,4 +150,6 @@ export interface SportTypeSchoolRanking {
   longitude: number;
   average_value: number;
   student_count: number;
+  top_student_name: string;
+  top_student_value: number;
 }

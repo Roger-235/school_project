@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email format').toLowerCase(),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email('請輸入有效的 Email').toLowerCase(),
+  password: z.string().min(1, '請輸入密碼'),
 })
 
 export const registerSchema = z.object({

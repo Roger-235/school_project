@@ -49,9 +49,6 @@ const SchoolDetailPanel = dynamic(() => import('../components/map/SchoolDetailPa
   ssr: false,
 });
 
-const ChampionMarkerLayer = dynamic(() => import('../components/map/ChampionMarkerLayer'), {
-  ssr: false,
-});
 
 const ChampionsList = dynamic(() => import('../components/map/ChampionsList'), {
   ssr: false,
@@ -246,26 +243,13 @@ export default function MapPage() {
                   />
                 )}
 
-                {/* School markers */}
+                {/* School markers，冠軍學校直接套用金色樣式 */}
                 {!schoolsLoading && schoolsData && (
                   <SchoolMarkerLayer
                     map={map}
                     schools={getSchoolsFromResponse(schoolsData)}
                     onSchoolClick={handleSchoolClick}
-                  />
-                )}
-
-                {/* 冠軍學校標記 */}
-                {showChampions && !championsLoading && champions && champions.length > 0 && (
-                  <ChampionMarkerLayer
-                    map={map}
-                    champions={champions}
-                    onSchoolClick={(schoolId) => {
-                      const school = getSchoolsFromResponse(schoolsData).find(s => s.id === schoolId);
-                      if (school) {
-                        handleSchoolClick(school);
-                      }
-                    }}
+                    champions={showChampions && !championsLoading ? (champions ?? []) : []}
                   />
                 )}
 

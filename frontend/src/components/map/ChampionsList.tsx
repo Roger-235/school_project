@@ -76,7 +76,7 @@ export default function ChampionsList({ champions, onChampionClick }: Props) {
   // 获取展开项目的排名（按选中的县市或全国排名）
   const { data: topSchools, isLoading: loadingTopSchools } = useTopSchoolsBySport(
     expandedSportId || 0,
-    200, // 增加 limit 以获取更多排名
+    10,
     countyNamesForRanking
   );
 
@@ -100,6 +100,8 @@ export default function ChampionsList({ champions, onChampionClick }: Props) {
       longitude: ranking.longitude,
       average_value: ranking.average_value,
       student_count: ranking.student_count,
+      top_student_name: ranking.top_student_name,
+      top_student_value: ranking.top_student_value,
     });
   };
 
@@ -274,11 +276,16 @@ export default function ChampionsList({ champions, onChampionClick }: Props) {
                                         <div className="font-medium text-gray-900 truncate">
                                           {champion.sport_type_name}
                                         </div>
-                                        <div className="text-blue-700 font-medium mt-0.5 truncate">
-                                          {champion.school_name}
+                                        {champion.top_student_name && (
+                                          <div className="text-amber-600 font-semibold mt-0.5 truncate">
+                                            {champion.top_student_name}
+                                          </div>
+                                        )}
+                                        <div className="text-gray-800 font-medium mt-0.5">
+                                          {champion.top_student_value.toFixed(1)} {champion.unit}
                                         </div>
-                                        <div className="text-gray-600 mt-0.5">
-                                          {champion.average_value.toFixed(1)} {champion.unit}
+                                        <div className="text-blue-600 text-xs mt-0.5 truncate">
+                                          {champion.school_name}
                                         </div>
                                       </div>
                                     </div>
@@ -329,11 +336,14 @@ export default function ChampionsList({ champions, onChampionClick }: Props) {
                                                 {ranking.rank}
                                               </span>
                                               <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-gray-800 truncate">
-                                                  {ranking.school_name}
+                                                <div className="font-medium text-amber-600 truncate">
+                                                  {ranking.top_student_name}
                                                 </div>
-                                                <div className="text-gray-600">
-                                                  {ranking.average_value.toFixed(1)} {ranking.unit}
+                                                <div className="font-semibold text-gray-800">
+                                                  {ranking.top_student_value.toFixed(1)} {ranking.unit}
+                                                </div>
+                                                <div className="text-gray-500 truncate">
+                                                  {ranking.school_name}
                                                 </div>
                                               </div>
                                               {ranking.rank === 1 && <span className="text-xs flex-shrink-0">🥇</span>}

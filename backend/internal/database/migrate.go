@@ -14,6 +14,7 @@ func Migrate(db *gorm.DB) error {
 
 	// AutoMigrate all models in correct order (dependencies first)
 	err := db.AutoMigrate(
+		&models.User{},
 		&models.School{},
 		&models.SportType{},
 		&models.Student{},

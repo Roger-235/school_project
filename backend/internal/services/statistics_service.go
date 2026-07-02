@@ -81,20 +81,22 @@ type Summary struct {
 
 // SchoolChampion 學校冠軍資訊
 type SchoolChampion struct {
-	SportTypeID   uint    `json:"sport_type_id"`
-	SportTypeName string  `json:"sport_type_name"`
-	Category      string  `json:"category"`
-	Unit          string  `json:"unit"`
-	SchoolID      uint    `json:"school_id"`
-	SchoolName    string  `json:"school_name"`
-	CountyName    string  `json:"county_name"`
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
-	AverageValue  float64 `json:"average_value"`
-	StudentCount  int     `json:"student_count"`
+	SportTypeID     uint    `json:"sport_type_id"`
+	SportTypeName   string  `json:"sport_type_name"`
+	Category        string  `json:"category"`
+	Unit            string  `json:"unit"`
+	SchoolID        uint    `json:"school_id"`
+	SchoolName      string  `json:"school_name"`
+	CountyName      string  `json:"county_name"`
+	Latitude        float64 `json:"latitude"`
+	Longitude       float64 `json:"longitude"`
+	AverageValue    float64 `json:"average_value"`
+	StudentCount    int     `json:"student_count"`
+	TopStudentName  string  `json:"top_student_name"`
+	TopStudentValue float64 `json:"top_student_value"`
 }
 
-// GetSchoolChampions 取得各運動項目的冠軍學校
+// GetSchoolChampions 取得各運動項目個人成績第一名及其學校
 func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolChampion, error) {
 	var champions []SchoolChampion
 
@@ -104,7 +106,7 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 		return nil, err
 	}
 
-	// 對每個運動類型找出冠軍學校
+	// 對每個運動類型找出個人成績第一名
 	for _, sportType := range sportTypes {
 		var champion SchoolChampion
 
@@ -114,6 +116,7 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 			orderDirection = "ASC"
 		}
 
+		// 直接找個人成績最好的學生，再取其學校資訊
 		query := `
 			SELECT
 				? as sport_type_id,
@@ -125,8 +128,10 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 				sch.county_name,
 				sch.latitude,
 				sch.longitude,
-				AVG(sr.value) as average_value,
-				COUNT(DISTINCT sr.student_id) as student_count
+				sr.value as average_value,
+				1 as student_count,
+				s.name as top_student_name,
+				sr.value as top_student_value
 			FROM sport_records sr
 			INNER JOIN students s ON sr.student_id = s.id
 			INNER JOIN schools sch ON s.school_id = sch.id
@@ -134,9 +139,7 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 			  AND sr.deleted_at IS NULL
 			  AND s.deleted_at IS NULL
 			  AND sch.deleted_at IS NULL
-			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
-			HAVING COUNT(DISTINCT sr.student_id) >= 1
-			ORDER BY average_value ` + orderDirection + `
+			ORDER BY sr.value ` + orderDirection + `
 			LIMIT 1
 		`
 
@@ -153,7 +156,6 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 			continue
 		}
 
-		// 如果找到冠軍，加入列表
 		if champion.SchoolID > 0 {
 			champions = append(champions, champion)
 		}
@@ -162,23 +164,25 @@ func (s *StatisticsService) GetSchoolChampions(ctx context.Context) ([]SchoolCha
 	return champions, nil
 }
 
-// SportTypeSchoolRanking 學校在運動項目中的排名資訊
+// SportTypeSchoolRanking 個人在運動項目中的排名資訊
 type SportTypeSchoolRanking struct {
-	Rank          int     `json:"rank"`
-	SportTypeID   uint    `json:"sport_type_id"`
-	SportTypeName string  `json:"sport_type_name"`
-	Category      string  `json:"category"`
-	Unit          string  `json:"unit"`
-	SchoolID      uint    `json:"school_id"`
-	SchoolName    string  `json:"school_name"`
-	CountyName    string  `json:"county_name"`
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
-	AverageValue  float64 `json:"average_value"`
-	StudentCount  int     `json:"student_count"`
+	Rank            int     `json:"rank"`
+	SportTypeID     uint    `json:"sport_type_id"`
+	SportTypeName   string  `json:"sport_type_name"`
+	Category        string  `json:"category"`
+	Unit            string  `json:"unit"`
+	SchoolID        uint    `json:"school_id"`
+	SchoolName      string  `json:"school_name"`
+	CountyName      string  `json:"county_name"`
+	Latitude        float64 `json:"latitude"`
+	Longitude       float64 `json:"longitude"`
+	AverageValue    float64 `json:"average_value"`
+	StudentCount    int     `json:"student_count"`
+	TopStudentName  string  `json:"top_student_name"`
+	TopStudentValue float64 `json:"top_student_value"`
 }
 
-// GetTopSchoolsBySport 取得指定運動項目的前N名學校（支援縣市過濾）
+// GetTopSchoolsBySport 取得指定運動項目的前N名個人成績（支援縣市過濾）
 func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeID uint, limit int, county ...string) ([]SportTypeSchoolRanking, error) {
 	var rankings []SportTypeSchoolRanking
 
@@ -203,15 +207,16 @@ func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeI
 		sportType.DefaultUnit,
 		sportType.ID,
 	}
-	
+
 	if len(county) > 0 && county[0] != "" {
 		whereClause = "AND sch.county_name = ?"
 		queryArgs = append(queryArgs, county[0])
 	}
 
+	// 改為個人成績排名，每位學生取最佳一筆
 	query := `
 		SELECT
-			ROW_NUMBER() OVER (ORDER BY avg_val ` + orderDirection + `) as ` + "`rank`" + `,
+			ROW_NUMBER() OVER (ORDER BY best_val ` + orderDirection + `) as ` + "`rank`" + `,
 			? as sport_type_id,
 			? as sport_type_name,
 			? as category,
@@ -221,17 +226,20 @@ func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeI
 			county_name,
 			latitude,
 			longitude,
-			avg_val as average_value,
-			student_count
+			best_val as average_value,
+			1 as student_count,
+			student_name as top_student_name,
+			best_val as top_student_value
 		FROM (
 			SELECT
+				s.id as student_id,
+				s.name as student_name,
 				sch.id as school_id,
 				sch.name as school_name,
 				sch.county_name,
 				sch.latitude,
 				sch.longitude,
-				AVG(sr.value) as avg_val,
-				COUNT(DISTINCT sr.student_id) as student_count
+				` + bestValExpr(orderDirection) + ` as best_val
 			FROM sport_records sr
 			INNER JOIN students s ON sr.student_id = s.id
 			INNER JOIN schools sch ON s.school_id = sch.id
@@ -240,23 +248,28 @@ func (s *StatisticsService) GetTopSchoolsBySport(ctx context.Context, sportTypeI
 			  AND s.deleted_at IS NULL
 			  AND sch.deleted_at IS NULL
 			  ` + whereClause + `
-			GROUP BY sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
-			HAVING COUNT(DISTINCT sr.student_id) >= 1
+			GROUP BY s.id, s.name, sch.id, sch.name, sch.county_name, sch.latitude, sch.longitude
 		) ranked
 		ORDER BY ` + "`rank`" + `
 		LIMIT ?
 	`
 
-	// 添加 limit 到查询参数
 	queryArgs = append(queryArgs, limit)
 
 	err := s.db.Raw(query, queryArgs...).Scan(&rankings).Error
-
 	if err != nil {
 		return nil, fmt.Errorf("查詢排名失敗: %w", err)
 	}
 
 	return rankings, nil
+}
+
+// bestValExpr 根據排序方向回傳取最佳值的 SQL 聚合函式
+func bestValExpr(orderDirection string) string {
+	if orderDirection == "ASC" {
+		return "MIN(sr.value)"
+	}
+	return "MAX(sr.value)"
 }
 
 // GetAllTopSchools 取得所有運動項目的前N名學校

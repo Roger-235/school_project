@@ -10,6 +10,7 @@ import (
 	"github.com/wei979/ICACP/backend/config"
 	"github.com/wei979/ICACP/backend/internal/database"
 	"github.com/wei979/ICACP/backend/internal/handlers"
+	"github.com/wei979/ICACP/backend/internal/middleware"
 	"github.com/wei979/ICACP/backend/internal/services"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -38,11 +39,15 @@ func main() {
 	}
 	defer config.CloseRedis()
 
+	// Initialize auth service
+	authSvc := services.NewAuthService(db)
+
 	// Initialize Gin router
 	router := gin.Default()
 
-	// CORS middleware
+	// Global middleware
 	router.Use(corsMiddleware())
+	router.Use(middleware.SecurityHeaders())
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -52,13 +57,19 @@ func main() {
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 
-	// County statistics routes (protected)
+	// Auth routes (public)
+	authHandler := handlers.NewAuthHandler(authSvc)
+	authRoutes := v1.Group("/auth")
+	{
+		authRoutes.POST("/login", authHandler.Login)
+		authRoutes.GET("/me", middleware.RequireAuth(authSvc), authHandler.Me)
+	}
+
+	// County statistics routes (read-only, public)
 	countyService := services.NewCountyService(db, config.GetRedisClient())
 	countyHandler := handlers.NewCountyHandler(countyService)
 
 	countyRoutes := v1.Group("/counties")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// countyRoutes.Use(authMiddleware())
 	{
 		countyRoutes.GET("/statistics", countyHandler.GetAllCountyStatistics)
 		countyRoutes.GET("/:countyName/statistics", countyHandler.GetCountyStatistics)
@@ -69,15 +80,13 @@ func main() {
 	schoolHandler := handlers.NewSchoolHandler(schoolService)
 
 	schoolRoutes := v1.Group("/schools")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// schoolRoutes.Use(authMiddleware())
 	{
 		schoolRoutes.GET("/map", schoolHandler.GetForMap) // Must be before /:id
 		schoolRoutes.GET("", schoolHandler.List)
 		schoolRoutes.GET("/:id", schoolHandler.Get)
-		schoolRoutes.POST("", schoolHandler.Create)
-		schoolRoutes.PUT("/:id", schoolHandler.Update)
-		schoolRoutes.DELETE("/:id", schoolHandler.Delete)
+		schoolRoutes.POST("", middleware.RequireAuth(authSvc), schoolHandler.Create)
+		schoolRoutes.PUT("/:id", middleware.RequireAuth(authSvc), schoolHandler.Update)
+		schoolRoutes.DELETE("/:id", middleware.RequireAuth(authSvc), schoolHandler.Delete)
 	}
 
 	// Student routes
@@ -85,8 +94,7 @@ func main() {
 	studentHandler := handlers.NewStudentHandler(studentService)
 
 	studentRoutes := v1.Group("/students")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// studentRoutes.Use(authMiddleware())
+	studentRoutes.Use(middleware.RequireAuth(authSvc))
 	{
 		studentRoutes.GET("", studentHandler.List)
 		studentRoutes.GET("/:id", studentHandler.Get)
@@ -96,26 +104,40 @@ func main() {
 		studentRoutes.DELETE("/:id", studentHandler.Delete)
 	}
 
-	// Sport type routes
+	// Sport type routes (read-only, public)
 	sportTypeService := services.NewSportTypeService(db)
 	sportTypeHandler := handlers.NewSportTypeHandler(sportTypeService)
 
 	sportTypeRoutes := v1.Group("/sport-types")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// sportTypeRoutes.Use(authMiddleware())
 	{
 		sportTypeRoutes.GET("", sportTypeHandler.List)
 		sportTypeRoutes.GET("/categories", sportTypeHandler.GetCategories)
 		sportTypeRoutes.GET("/:id", sportTypeHandler.Get)
 	}
 
+	// ========== Statistics routes ==========
+	statisticsService := services.NewStatisticsService(db, config.GetRedisClient())
+	statisticsHandler := handlers.NewStatisticsHandler(statisticsService)
+
+	statisticsRoutes := v1.Group("/statistics")
+	{
+		statisticsRoutes.GET("/student-comparison/:studentId", statisticsHandler.GetStudentComparison)
+		statisticsRoutes.GET("/grade-comparison/:studentId", statisticsHandler.GetGradeComparison)
+		statisticsRoutes.GET("/county-comparison/:studentId", statisticsHandler.GetCountyComparison)
+		statisticsRoutes.GET("/county-sport-averages/:countyName", statisticsHandler.GetCountySportAverages)
+		statisticsRoutes.GET("/national-averages", statisticsHandler.GetNationalAverages)
+		statisticsRoutes.GET("/school-champions", statisticsHandler.GetSchoolChampions)
+		statisticsRoutes.GET("/top-schools", statisticsHandler.GetAllTopSchools)
+		statisticsRoutes.GET("/top-schools/:sportTypeId", statisticsHandler.GetTopSchoolsBySport)
+	}
+	// ========== 統計路由結束 ==========
+
 	// Sport record routes
 	sportRecordService := services.NewSportRecordService(db)
+	sportRecordService.SetStatisticsService(statisticsService)
 	sportRecordHandler := handlers.NewSportRecordHandler(sportRecordService)
 
 	sportRecordRoutes := v1.Group("/sport-records")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// sportRecordRoutes.Use(authMiddleware())
 	{
 		sportRecordRoutes.GET("", sportRecordHandler.List)
 		sportRecordRoutes.GET("/trend", sportRecordHandler.GetTrend)
@@ -124,21 +146,21 @@ func main() {
 		sportRecordRoutes.GET("/bulk-scores", sportRecordHandler.GetBulkScores)
 		sportRecordRoutes.GET("/:id", sportRecordHandler.Get)
 		sportRecordRoutes.GET("/:id/history", sportRecordHandler.GetHistory)
-		sportRecordRoutes.POST("", sportRecordHandler.Create)
-		sportRecordRoutes.PUT("/:id", sportRecordHandler.Update)
-		sportRecordRoutes.DELETE("/:id", sportRecordHandler.Delete)
+		sportRecordRoutes.POST("", middleware.RequireAuth(authSvc), sportRecordHandler.Create)
+		sportRecordRoutes.PUT("/:id", middleware.RequireAuth(authSvc), sportRecordHandler.Update)
+		sportRecordRoutes.DELETE("/:id", middleware.RequireAuth(authSvc), sportRecordHandler.Delete)
 	}
 
 	// ★★★ 已移除 Analysis 相關程式碼 ★★★
 
-	// Import routes (Excel batch import)
+	// Import routes (Excel batch import) — auth required
 	importService := services.NewImportService(db)
+	importService.SetStatisticsService(statisticsService)
 	templateService := services.NewTemplateService(db)
 	importHandler := handlers.NewImportHandler(importService, templateService)
 
 	importRoutes := v1.Group("/import")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// importRoutes.Use(authMiddleware())
+	importRoutes.Use(middleware.RequireAuth(authSvc))
 	{
 		// Template downloads
 		importRoutes.GET("/templates/students", importHandler.DownloadStudentTemplate)
@@ -155,27 +177,6 @@ func main() {
 		// Cancel preview
 		importRoutes.DELETE("/preview/:preview_id", importHandler.CancelPreview)
 	}
-
-	// ========== 🎯 在這裡加入統計路由 ==========
-	// Statistics routes (全國平均比較)
-	statisticsService := services.NewStatisticsService(db, config.GetRedisClient())
-	statisticsHandler := handlers.NewStatisticsHandler(statisticsService)
-
-	statisticsRoutes := v1.Group("/statistics")
-	// TODO: Add auth middleware when available from 001-user-auth
-	// statisticsRoutes.Use(authMiddleware())
-	{
-		statisticsRoutes.GET("/student-comparison/:studentId", statisticsHandler.GetStudentComparison)
-		statisticsRoutes.GET("/grade-comparison/:studentId", statisticsHandler.GetGradeComparison)
-		statisticsRoutes.GET("/county-comparison/:studentId", statisticsHandler.GetCountyComparison)
-		statisticsRoutes.GET("/county-sport-averages/:countyName", statisticsHandler.GetCountySportAverages)
-		statisticsRoutes.GET("/national-averages", statisticsHandler.GetNationalAverages)
-		statisticsRoutes.POST("/national-averages/calculate", statisticsHandler.CalculateNationalAverages)
-		statisticsRoutes.GET("/school-champions", statisticsHandler.GetSchoolChampions)
-		statisticsRoutes.GET("/top-schools", statisticsHandler.GetAllTopSchools)
-		statisticsRoutes.GET("/top-schools/:sportTypeId", statisticsHandler.GetTopSchoolsBySport)
-	}
-	// ========== 統計路由結束 ==========
 
 	// Start server
 	port := os.Getenv("PORT")

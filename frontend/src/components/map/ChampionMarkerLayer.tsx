@@ -103,6 +103,13 @@ export default function ChampionMarkerLayer({ map, champions, onSchoolClick }: P
 
     console.log('ChampionMarkerLayer: Creating markers for', Object.keys(championsBySchool).length, 'schools');
 
+    // 建立專屬 pane，z-index 620 高於預設 markerPane (600)
+    if (!map.getPane('championPane')) {
+      map.createPane('championPane');
+      const paneEl = map.getPane('championPane') as HTMLElement;
+      if (paneEl) paneEl.style.zIndex = '620';
+    }
+
     // 為每個冠軍學校創建標記
     Object.values(championsBySchool).forEach(({ school, sports }) => {
       // 創建金色冠軍圖標
@@ -121,10 +128,11 @@ export default function ChampionMarkerLayer({ map, champions, onSchoolClick }: P
         popupAnchor: [0, -40],
       });
 
-      // 創建標記
+      // 創建標記，使用自訂 championPane 確保永遠在學校標記上層
       const marker = L.marker([school.latitude, school.longitude], {
         icon: championIcon,
-        zIndexOffset: 1000, // 確保冠軍標記永遠在上層
+        pane: 'championPane',
+        zIndexOffset: 1000,
       });
 
       // 創建彈窗內容

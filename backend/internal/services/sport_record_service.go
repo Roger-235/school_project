@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/wei979/ICACP/backend/internal/models"
@@ -10,7 +12,8 @@ import (
 
 // SportRecordService handles business logic for sport record operations
 type SportRecordService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	statsSvc *StatisticsService
 }
 
 // NewSportRecordService creates a new SportRecordService instance
@@ -18,6 +21,23 @@ func NewSportRecordService(db *gorm.DB) *SportRecordService {
 	return &SportRecordService{
 		db: db,
 	}
+}
+
+// SetStatisticsService 設定統計 service，用於資料變更後自動重算全國平均
+func (s *SportRecordService) SetStatisticsService(statsSvc *StatisticsService) {
+	s.statsSvc = statsSvc
+}
+
+// triggerRecalculate 在背景非同步重新計算全國平均值
+func (s *SportRecordService) triggerRecalculate() {
+	if s.statsSvc == nil {
+		return
+	}
+	go func() {
+		if err := s.statsSvc.CalculateNationalAverages(context.Background()); err != nil {
+			log.Printf("背景重算全國平均值失敗: %v", err)
+		}
+	}()
 }
 
 // List retrieves sport records for a student with pagination
@@ -223,6 +243,7 @@ func (s *SportRecordService) Create(req *models.CreateSportRecordRequest) (*mode
 	// Reload with relations
 	s.db.Preload("SportType").First(record, record.ID)
 
+	s.triggerRecalculate()
 	return record, nil
 }
 
@@ -286,6 +307,7 @@ func (s *SportRecordService) Update(id uint, req *models.UpdateSportRecordReques
 	// Reload with relations
 	s.db.Preload("SportType").First(&record, id)
 
+	s.triggerRecalculate()
 	return &record, nil
 }
 
@@ -303,6 +325,7 @@ func (s *SportRecordService) Delete(id uint) error {
 		return fmt.Errorf("failed to delete sport record: %w", err)
 	}
 
+	s.triggerRecalculate()
 	return nil
 }
 

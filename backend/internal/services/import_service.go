@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -16,8 +18,9 @@ import (
 
 // ImportService handles Excel import operations
 type ImportService struct {
-	db    *gorm.DB
-	store *PreviewStore
+	db       *gorm.DB
+	store    *PreviewStore
+	statsSvc *StatisticsService
 }
 
 // NewImportService creates a new ImportService
@@ -26,6 +29,11 @@ func NewImportService(db *gorm.DB) *ImportService {
 		db:    db,
 		store: NewPreviewStore(15 * time.Minute), // 15 minute TTL
 	}
+}
+
+// SetStatisticsService 設定統計 service，用於匯入後自動重算全國平均
+func (s *ImportService) SetStatisticsService(statsSvc *StatisticsService) {
+	s.statsSvc = statsSvc
 }
 
 // ValidateFileFormat checks if the file is a valid .xlsx file
@@ -762,6 +770,15 @@ func (s *ImportService) ExecuteRecordsImport(previewID string, includeWarnings b
 
 	// Mark preview as executed
 	s.store.MarkExecuted(previewID)
+
+	// 背景重算全國平均值
+	if s.statsSvc != nil {
+		go func() {
+			if err := s.statsSvc.CalculateNationalAverages(context.Background()); err != nil {
+				log.Printf("背景重算全國平均值失敗: %v", err)
+			}
+		}()
+	}
 
 	return result, nil
 }
